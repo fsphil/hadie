@@ -5,4 +5,7 @@
 
 # Build stuff
 *.o
+*.map
+*.out
+*.hex
 
