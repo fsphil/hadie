@@ -3,6 +3,7 @@
  * May be used under the terms of the GNU Lesser General Public License (LGPL)
  */
 
+#include "config.h"
 #include <string.h>
 #include <avr/pgmspace.h>
 #include "rs8.h"

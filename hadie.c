@@ -9,6 +9,7 @@
 
 #define CALLSIGN "hadie"
 
+#include "config.h"
 #include <avr/interrupt.h>
 #include "rs8.h"
 
