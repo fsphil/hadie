@@ -1,0 +1,9 @@
+HADIE - High Altitude Digital Imaging Experiment
+------------------------------------------------
+
+This is the software used on the Hadie flight computer. It's been written
+for an ATmega644P clocked at 7.3728MHz but should be easy enough to adapt
+to other AVR microcontrollers.
+
+Requires avr-gcc to compile.
+
