@@ -1,0 +1,8 @@
+
+# Temporary files
+*~
+*.swp
+
+# Build stuff
+*.o
+
