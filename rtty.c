@@ -9,9 +9,9 @@
 
 #include "config.h"
 #include <stdint.h>
-#include <io.h>
+#include <avr/io.h>
 #include <util/delay.h>
-#include <pgmspace.h>
+#include <avr/pgmspace.h>
 
 #define RTTY_BAUD  (300)
 #define RTTY_DELAY (1000000 / RTTY_BAUD)
@@ -68,10 +68,10 @@ void rtx_string_P(PGM_P s)
 	while((b = pgm_read_byte(s++)) != '\0') rtx_byte(b);
 }
 
-void rtx_packet(uint8_t *packet)
+void rtx_data(uint8_t *data, size_t length)
 {
 	int b;
-	for(b = 0; b <= PKT_SIZE; b++) rtx_byte(packet[b]);
+	for(b = 0; b < length; b++) rtx_byte(data[b]);
 }
 
 void rtx_init()
