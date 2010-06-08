@@ -9,6 +9,7 @@
 
 #include "config.h"
 #include <avr/interrupt.h>
+#include "rtty.h"
 #include "rs8.h"
 
 int main(void)
@@ -37,6 +38,8 @@ int main(void)
 	 * 30: AVCC     - 3.3v
 	 * 31: GND      - GND
 	*/
+	
+	rtx_init();
 		
 	/* Start interrupts and enter main loop */
 	sei();

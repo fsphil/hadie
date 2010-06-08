@@ -11,7 +11,7 @@
 #define INC_RTTY_H
 
 #include <stdint.h>
-#include <pgmspace.h>
+#include <avr/pgmspace.h>
 
 extern void rtx_baud(int baud);
 extern void rtx_string(char *s);
