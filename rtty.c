@@ -25,59 +25,59 @@
 uint16_t rtty_delay = (1000000 / RTTY_BAUD);
 //#define RTTY_DELAY rtty_delay
 
-void tx_baud(int baud)
+void rtx_baud(int baud)
 {
 	rtty_delay = 1000000 / baud;
 }
 
-inline void tx_bit(uint8_t b)
+inline void rtx_bit(uint8_t b)
 {
 	PORTB &= ~(MARK | SPACE);
 	PORTB |= b;
 }
 
-void tx_byte(uint8_t byte)
+void rtx_byte(uint8_t byte)
 {
 	int i;
 	
 	/* Start bit */
-	tx_bit(SPACE);
+	rtx_bit(SPACE);
 	_delay_us(RTTY_DELAY);
 	
 	/* 7 bit */
 	for(i = 0; i < 8; i++)
 	{
-		if(byte & 1 << i) tx_bit(MARK); else tx_bit(SPACE);
+		if(byte & 1 << i) rtx_bit(MARK); else rtx_bit(SPACE);
 		_delay_us(RTTY_DELAY);
 	}
 	
 	/* Stop bit 1 */
-	tx_bit(MARK);
+	rtx_bit(MARK);
 	_delay_us(RTTY_DELAY);
 	_delay_us(RTTY_DELAY / 2);
 }
 
-void tx_string(char *s)
+void rtx_string(char *s)
 {
-	while(*s != '\0') tx_byte(*(s++));
+	while(*s != '\0') rtx_byte(*(s++));
 }
 
-void tx_string_P(PGM_P s)
+void rtx_string_P(PGM_P s)
 {
 	char b;
-	while((b = pgm_read_byte(s++)) != '\0') tx_byte(b);
+	while((b = pgm_read_byte(s++)) != '\0') rtx_byte(b);
 }
 
-void tx_packet(uint8_t *packet)
+void rtx_packet(uint8_t *packet)
 {
 	int b;
-	for(b = 0; b <= PKT_SIZE; b++) tx_byte(packet[b]);
+	for(b = 0; b <= PKT_SIZE; b++) rtx_byte(packet[b]);
 }
 
-void tx_init()
+void rtx_init()
 {
 	/* We use Port B pins 1, 2 and 3 - MARK by default */
-	tx_bit(MARK);
+	rtx_bit(MARK);
 	PORTB |= TXENABLE;
 	DDRB |= MARK | SPACE | TXENABLE;
 }
