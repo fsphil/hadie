@@ -7,8 +7,6 @@
 /* and redistribute it under the terms of this license. A     */
 /* copy should be included with this source.                  */
 
-#define CALLSIGN "hadie"
-
 #include "config.h"
 #include <avr/interrupt.h>
 #include "rs8.h"
