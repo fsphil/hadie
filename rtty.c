@@ -72,6 +72,11 @@ void rtx_data(uint8_t *data, size_t length)
 	for(b = 0; b < length; b++) rtx_byte(data[b]);
 }
 
+void rtx_wait()
+{
+	/* TODO: Wait for interrupt driven TX to finish */
+}
+
 void rtx_init()
 {
 	/* We use Port B pins 1, 2 and 3 - MARK by default */
