@@ -8,12 +8,10 @@
 /* copy should be included with this source.                  */
 
 #include "config.h"
-#include <stdint.h>
 #include <avr/io.h>
 #include <util/delay.h>
 #include <avr/pgmspace.h>
 
-#define RTTY_BAUD  (300)
 #define RTTY_DELAY (1000000 / RTTY_BAUD)
 
 /* MARK = Upper tone, Idle, bit  */

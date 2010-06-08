@@ -11,7 +11,8 @@
 #ifndef INC_CONFIG_H
 #define INC_CONFIG_H
 
-#define F_CPU    (7372800)       /* Ticks per second     */
-#define CALLSIGN "hadie"         /* The mission callsign */
+#define F_CPU     (7372800)       /* Ticks per second     */
+#define CALLSIGN  "hadie"         /* The mission callsign */
+#define RTTY_BAUD (300)           /* RTTY baud rate       */
 
 #endif
