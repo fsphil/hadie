@@ -30,8 +30,7 @@ void rtx_baud(int baud)
 
 inline void rtx_bit(uint8_t b)
 {
-	PORTB &= ~(MARK | SPACE);
-	PORTB |= b;
+	PORTB = (PORTB & ~(MARK | SPACE)) | b;
 }
 
 void rtx_byte(uint8_t byte)
