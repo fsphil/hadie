@@ -9,9 +9,20 @@
 
 #include "config.h"
 #include <util/delay.h>
+#include <util/crc16.h>
 #include <avr/interrupt.h>
 #include "rtty.h"
 #include "rs8.h"
+
+uint16_t gps_CRC16_checksum(char *s)
+{
+	uint16_t x;
+	
+	for(x = 0xFFFF; *s; s++)
+		x = _crc_xmodem_update(x, (uint8_t) *s);
+	
+	return(x);
+}
 
 int main(void)
 {
