@@ -22,6 +22,7 @@
 
 #define TXBIT(b) PORTB = (PORTB & ~(MARK | SPACE)) | (b)
 
+volatile uint8_t  txpgm = 0;
 volatile uint8_t *txbuf = 0;
 volatile uint16_t txlen = 0;
 
@@ -44,7 +45,8 @@ ISR(TIMER0_COMPA_vect)
 	
 	if(bit == 0 && txlen > 0)
 	{
-		byte = *(txbuf++);
+		if(txpgm == 0) byte = *(txbuf++);
+		else byte = pgm_read_byte(txbuf++);
 		txlen--;
 	}
 }
@@ -53,19 +55,24 @@ void rtx_string(char *s)
 {
 	uint16_t length = strlen(s);
 	rtx_wait();
+	txpgm = 0;
 	txbuf = (uint8_t *) s;
 	txlen = length;
 }
 
 void rtx_string_P(PGM_P s)
 {
-	//char b;
-	//while((b = pgm_read_byte(s++)) != '\0') rtx_byte(b);
+	uint16_t length = strlen_P(s);
+	rtx_wait();
+	txpgm = 1;
+	txbuf = (uint8_t *) s;
+	txlen = length;
 }
 
 void rtx_data(uint8_t *data, size_t length)
 {
 	rtx_wait();
+	txpgm = 0;
 	txbuf = data;
 	txlen = length;
 }
