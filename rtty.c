@@ -51,38 +51,6 @@ ISR(TIMER0_COMPA_vect)
 	}
 }
 
-void rtx_string(char *s)
-{
-	uint16_t length = strlen(s);
-	rtx_wait();
-	txpgm = 0;
-	txbuf = (uint8_t *) s;
-	txlen = length;
-}
-
-void rtx_string_P(PGM_P s)
-{
-	uint16_t length = strlen_P(s);
-	rtx_wait();
-	txpgm = 1;
-	txbuf = (uint8_t *) s;
-	txlen = length;
-}
-
-void rtx_data(uint8_t *data, size_t length)
-{
-	rtx_wait();
-	txpgm = 0;
-	txbuf = data;
-	txlen = length;
-}
-
-void rtx_wait()
-{
-	/* Wait for interrupt driven TX to finish */
-	while(txlen > 0);
-}
-
 void rtx_init()
 {
 	/* RTTY is driven by TIMER0 in CTC mode */
@@ -95,5 +63,39 @@ void rtx_init()
 	TXBIT(MARK);
 	PORTB |= TXENABLE;
 	DDRB |= MARK | SPACE | TXENABLE;
+}
+
+void inline rtx_wait()
+{
+	/* Wait for interrupt driven TX to finish */
+	while(txlen > 0);
+}
+
+void rtx_data(uint8_t *data, size_t length)
+{
+	rtx_wait();
+	txpgm = 0;
+	txbuf = data;
+	txlen = length;
+}
+
+void rtx_data_P(PGM_P data, size_t length)
+{
+	rtx_wait();
+	txpgm = 1;
+	txbuf = (uint8_t *) data;
+	txlen = length;
+}
+
+void rtx_string(char *s)
+{
+	uint16_t length = strlen(s);
+	rtx_data((uint8_t *) s, length);
+}
+
+void rtx_string_P(PGM_P s)
+{
+	uint16_t length = strlen_P(s);
+	rtx_data_P(s, length);
 }
 
