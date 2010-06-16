@@ -69,6 +69,7 @@ void inline rtx_wait()
 {
 	/* Wait for interrupt driven TX to finish */
 	while(txlen > 0);
+	while(txlen > 0);
 }
 
 void rtx_data(uint8_t *data, size_t length)
