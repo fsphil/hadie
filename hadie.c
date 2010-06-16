@@ -35,7 +35,7 @@ int main(void)
 	
 	while(1)
 	{
-		
+		rtx_string("Hello, World!\n");
 	}
 	
 	return(0);

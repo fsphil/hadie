@@ -13,7 +13,6 @@
 #include <stdint.h>
 #include <avr/pgmspace.h>
 
-extern void rtx_baud(int baud);
 extern void rtx_string(char *s);
 extern void rtx_string_P(PGM_P s);
 extern void rtx_data(uint8_t *data, size_t length);

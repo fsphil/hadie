@@ -10,76 +10,82 @@
 #include "config.h"
 #include <avr/io.h>
 #include <util/delay.h>
+#include <avr/interrupt.h>
 #include <avr/pgmspace.h>
-
-#define RTTY_DELAY (1000000 / RTTY_BAUD)
+#include <string.h>
+#include "rtty.h"
 
 /* MARK = Upper tone, Idle, bit  */
 #define TXENABLE (0x04)
 #define MARK  (0x02)
 #define SPACE (0x01)
 
-/* RTTY speed */
-uint16_t rtty_delay = (1000000 / RTTY_BAUD);
-//#define RTTY_DELAY rtty_delay
+#define TXBIT(b) PORTB = (PORTB & ~(MARK | SPACE)) | (b)
 
-void rtx_baud(int baud)
-{
-	rtty_delay = 1000000 / baud;
-}
+volatile uint8_t *txbuf = 0;
+volatile uint16_t txlen = 0;
 
-inline void rtx_bit(uint8_t b)
+ISR(TIMER0_COMPA_vect)
 {
-	PORTB = (PORTB & ~(MARK | SPACE)) | b;
-}
-
-void rtx_byte(uint8_t byte)
-{
-	int i;
+	/* The currently transmitting byte, including framing */
+	static uint8_t byte = 0x00;
+	static uint8_t bit  = 0x00;
 	
-	/* Start bit */
-	rtx_bit(SPACE);
-	_delay_us(RTTY_DELAY);
-	
-	/* 7 bit */
-	for(i = 0; i < 8; i++)
+	uint8_t b = 0;
+	switch(bit++)
 	{
-		if(byte & 1 << i) rtx_bit(MARK); else rtx_bit(SPACE);
-		_delay_us(RTTY_DELAY);
+	case 0: b = 0; break; /* Start bit */
+	case 9: b = 1; break; /* Stop bit */
+	case 10: b = 1; TCNT0 += OCR0A >> 1; bit = 0; break; /* Stop bit 0.5 */
+	default: b = byte & 1; byte >>= 1; break;
 	}
 	
-	/* Stop bit 1 */
-	rtx_bit(MARK);
-	_delay_us(RTTY_DELAY);
-	_delay_us(RTTY_DELAY / 2);
+	TXBIT(b ? MARK : SPACE);
+	
+	if(bit == 0 && txlen > 0)
+	{
+		byte = *(txbuf++);
+		txlen--;
+	}
 }
 
 void rtx_string(char *s)
 {
-	while(*s != '\0') rtx_byte(*(s++));
+	uint16_t length = strlen(s);
+	rtx_wait();
+	txbuf = (uint8_t *) s;
+	txlen = length;
 }
 
 void rtx_string_P(PGM_P s)
 {
-	char b;
-	while((b = pgm_read_byte(s++)) != '\0') rtx_byte(b);
+	//char b;
+	//while((b = pgm_read_byte(s++)) != '\0') rtx_byte(b);
 }
 
 void rtx_data(uint8_t *data, size_t length)
 {
-	int b;
-	for(b = 0; b < length; b++) rtx_byte(data[b]);
+	rtx_wait();
+	txbuf = data;
+	txlen = length;
 }
 
 void rtx_wait()
 {
-	/* TODO: Wait for interrupt driven TX to finish */
+	/* Wait for interrupt driven TX to finish */
+	while(txlen > 0);
 }
 
 void rtx_init()
 {
-	/* We use Port B pins 1, 2 and 3 - MARK by default */
-	rtx_bit(MARK);
+	/* RTTY is driven by TIMER0 in CTC mode */
+	TCCR0A = _BV(WGM01); /* Mode 2, CTC */
+	TCCR0B = _BV(CS02) | _BV(CS00); /* prescaler 1024 */
+	OCR0A = F_CPU / 1024 / RTTY_BAUD;
+	TIMSK0 = _BV(OCIE0A); /* Enable interrupt */
+	
+	/* We use Port B pins 1, 2 and 3 */
+	TXBIT(MARK);
 	PORTB |= TXENABLE;
 	DDRB |= MARK | SPACE | TXENABLE;
 }
