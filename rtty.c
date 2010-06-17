@@ -16,11 +16,10 @@
 #include "rtty.h"
 
 /* MARK = Upper tone, Idle, bit  */
-#define TXENABLE (0x04)
-#define MARK  (0x02)
-#define SPACE (0x01)
+#define TXPIN    (1 << 0) /* PB0 */
+#define TXENABLE (1 << 1) /* PB1 */
 
-#define TXBIT(b) PORTB = (PORTB & ~(MARK | SPACE)) | (b)
+#define TXBIT(b) PORTB = (PORTB & ~TXPIN) | ((b) ? TXPIN : 0)
 
 volatile uint8_t  txpgm = 0;
 volatile uint8_t *txbuf = 0;
@@ -41,7 +40,7 @@ ISR(TIMER0_COMPA_vect)
 	default: b = byte & 1; byte >>= 1; break;
 	}
 	
-	TXBIT(b ? MARK : SPACE);
+	TXBIT(b);
 	
 	if(bit == 0 && txlen > 0)
 	{
@@ -59,10 +58,10 @@ void rtx_init()
 	OCR0A = F_CPU / 1024 / RTTY_BAUD;
 	TIMSK0 = _BV(OCIE0A); /* Enable interrupt */
 	
-	/* We use Port B pins 1, 2 and 3 */
-	TXBIT(MARK);
+	/* We use Port B pins 1 and 2 */
+	TXBIT(1);
 	PORTB |= TXENABLE;
-	DDRB |= MARK | SPACE | TXENABLE;
+	DDRB |= TXPIN | TXENABLE;
 }
 
 void inline rtx_wait()
