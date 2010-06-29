@@ -15,6 +15,9 @@
 #include <string.h>
 #include "rtty.h"
 
+/* For camera timeout */
+#include "c328.h"
+
 /* MARK = Upper tone, Idle, bit  */
 #define TXPIN    (1 << 0) /* PB0 */
 #define TXENABLE (1 << 1) /* PB1 */
@@ -48,6 +51,9 @@ ISR(TIMER0_COMPA_vect)
 		else byte = pgm_read_byte(txbuf++);
 		txlen--;
 	}
+	
+	/* Camera timeout tick */
+	c3_tick();
 }
 
 void rtx_init()
