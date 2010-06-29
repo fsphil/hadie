@@ -147,7 +147,7 @@ char c3_get_picture(uint8_t pt, uint16_t *length)
 	if(c3_rx(PIC_TIMEOUT) != CMD_DATA) return(-1);
 	
 	/* Get the file size from the DATA args */
-	*length = rxbuf[9] + (rxbuf[10] << 8);
+	*length = rxbuf[3] + (rxbuf[4] << 8);
 	
 	return(0);
 }
