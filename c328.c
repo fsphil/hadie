@@ -8,6 +8,9 @@
 /* >10ms timeout at 300 hz */
 #define CMD_TIMEOUT (4)
 
+/* Wait longer for the camera to take the image and return DATA response */
+#define PIC_TIMEOUT (200)
+
 #define RXREADY (UCSR0A & (1 << RXC0))
 
 /* Receive buffer */
@@ -141,7 +144,7 @@ char c3_get_picture(uint8_t pt, uint16_t *length)
 	if(c3_cmd(CMD_GET_PICTURE, pt, 0, 0, 0) != 0) return(-1);
 	
 	/* The camera should now send a DATA message */
-	if(c3_rx(CMD_TIMEOUT) != CMD_DATA) return(-1);
+	if(c3_rx(PIC_TIMEOUT) != CMD_DATA) return(-1);
 	
 	/* Get the file size from the DATA args */
 	*length = rxbuf[9] + (rxbuf[10] << 8);
