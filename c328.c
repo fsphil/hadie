@@ -16,7 +16,7 @@
 /* Receive buffer */
 #define RXBUF_LEN (64)
 static uint8_t rxbuf[RXBUF_LEN];
-static uint8_t rxbuf_len = 0;
+static uint16_t rxbuf_len = 0;
 
 /* Expected package size */
 static uint8_t pkg_len = 64; /* Default is 64 according to datasheet */
@@ -24,7 +24,7 @@ static uint8_t pkg_len = 64; /* Default is 64 according to datasheet */
 /* Timeout counter */
 volatile static uint8_t timeout_clk = 0;
 
-void inline c3_tick()
+void inline c3_tick(void)
 {
 	if(timeout_clk) timeout_clk--;
 }
@@ -80,7 +80,7 @@ static char c3_cmd(uint8_t cmd, uint8_t a1, uint8_t a2, uint8_t a3, uint8_t a4)
 	return(0);
 }
 
-void c3_init()
+void c3_init(void)
 {
 	/* Do UART initialisation, port 0 @ 57600 baud for 7.3728 MHz clock */
 	UBRR0H = 0;
@@ -93,7 +93,7 @@ void c3_init()
 	UCSR0C = (1 << UCSZ01) | (1 << UCSZ00);
 }
 
-char c3_sync()
+char c3_sync(void)
 {
 	char i;
 	
@@ -179,10 +179,12 @@ char c3_get_package(uint16_t id, uint8_t **dst, uint16_t *length)
 			s = rxbuf[2] + (rxbuf[3] << 8) + 6;
 			if(s > pkg_len) return(-1);
 		}
+		
+		timeout_clk = CMD_TIMEOUT;
 	}
 	
 	/* Test for timeout or incomplete package */
-	if(rxbuf_len < s) return(-1);
+	if(rxbuf_len != s) return(-1);
 	
 	/* Test checksum */
 	checksum -= rxbuf[rxbuf_len - 2];
@@ -195,7 +197,7 @@ char c3_get_package(uint16_t id, uint8_t **dst, uint16_t *length)
 	return(0);
 }
 
-char c3_finish_picture()
+char c3_finish_picture(void)
 {
 	c3_tx(CMD_ACK, 0, 0, 0xF0, 0xF0);
 	return(0);

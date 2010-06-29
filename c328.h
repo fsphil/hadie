@@ -80,16 +80,16 @@
 #define ERR_SEND_PICTURE_ERROR              0xF5
 #define ERR_SEND_COMMAND_ERROR              0xFF
 
-extern void inline c3_tick();
+extern void inline c3_tick(void);
 
-extern void c3_init();
-extern char c3_sync();
+extern void c3_init(void);
+extern char c3_sync(void);
 
 extern char c3_setup(uint8_t ct, uint8_t rr, uint8_t jr);
 extern char c3_set_package_size(uint16_t s);
 extern char c3_snapshot(uint8_t st, uint16_t skip_frame);
 extern char c3_get_picture(uint8_t pt, uint16_t *length);
 extern char c3_get_package(uint16_t id, uint8_t **dst, uint16_t *length);
-extern char c3_finish_picture();
+extern char c3_finish_picture(void);
 
 #endif
