@@ -24,9 +24,9 @@
 
 #define TXBIT(b) PORTB = (PORTB & ~TXPIN) | ((b) ? TXPIN : 0)
 
-volatile uint8_t  txpgm = 0;
-volatile uint8_t *txbuf = 0;
-volatile uint16_t txlen = 0;
+volatile static uint8_t  txpgm = 0;
+volatile static uint8_t *txbuf = 0;
+volatile static uint16_t txlen = 0;
 
 ISR(TIMER0_COMPA_vect)
 {
