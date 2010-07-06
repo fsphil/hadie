@@ -6,7 +6,7 @@
 #include "c328.h"
 
 /* >10ms timeout at 300 hz */
-#define CMD_TIMEOUT (4)
+#define CMD_TIMEOUT (20)
 
 /* Wait longer for the camera to take the image and return DATA response */
 #define PIC_TIMEOUT (200)
@@ -14,9 +14,9 @@
 #define RXREADY (UCSR0A & (1 << RXC0))
 
 /* Receive buffer */
-#define RXBUF_LEN (64)
-static uint8_t rxbuf[RXBUF_LEN];
-static uint16_t rxbuf_len = 0;
+#define RXBUF_LEN (256)
+uint8_t rxbuf[RXBUF_LEN];
+uint16_t rxbuf_len = 0;
 
 /* Expected package size */
 static uint8_t pkg_len = 64; /* Default is 64 according to datasheet */
@@ -82,9 +82,9 @@ static char c3_cmd(uint8_t cmd, uint8_t a1, uint8_t a2, uint8_t a3, uint8_t a4)
 
 void c3_init(void)
 {
-	/* Do UART initialisation, port 0 @ 57600 baud for 7.3728 MHz clock */
+	/* Do UART initialisation, port 0 @ 9600 baud for 7.3728 MHz clock */
 	UBRR0H = 0;
-	UBRR0L = 7;
+	UBRR0L = 47;
 	
 	/* Enable TX & RX */
 	UCSR0B = (1 << RXEN0) | (1 << TXEN0);
@@ -108,6 +108,7 @@ char c3_sync(void)
 		
 		/* ACK the SYNC and return success code */
 		c3_tx(CMD_ACK, CMD_SYNC, 0, 0, 0);
+		
 		return(0);
 	}
 	
@@ -186,7 +187,7 @@ char c3_get_package(uint16_t id, uint8_t **dst, uint16_t *length)
 	/* Test for timeout or incomplete package */
 	if(rxbuf_len != s) return(-1);
 	
-	/* Test checksum */
+	/* Fix and test checksum */
 	checksum -= rxbuf[rxbuf_len - 2];
 	if(checksum != rxbuf[rxbuf_len - 2]) return(-1);
 	
