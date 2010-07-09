@@ -19,7 +19,7 @@ uint8_t rxbuf[RXBUF_LEN];
 uint16_t rxbuf_len = 0;
 
 /* Expected package size */
-static uint8_t pkg_len = 64; /* Default is 64 according to datasheet */
+static uint16_t pkg_len = 64; /* Default is 64 according to datasheet */
 
 /* Timeout counter */
 volatile static uint8_t timeout_clk = 0;
@@ -156,7 +156,9 @@ char c3_get_picture(uint8_t pt, uint16_t *length)
 char c3_get_package(uint16_t id, uint8_t **dst, uint16_t *length)
 {
 	uint8_t checksum;
-	uint16_t s;
+	volatile uint16_t s;
+	/* s is volatile to work around an apparent bug in avr-gcc --
+	 * discovered by ms7821 in #highaltitude */
 	
 	rxbuf_len = 0;
 	checksum = 0;
@@ -172,7 +174,8 @@ char c3_get_package(uint16_t id, uint8_t **dst, uint16_t *length)
 		if(!RXREADY) continue;
 		
 		/* Read the byte and update checksum */
-		checksum += rxbuf[rxbuf_len++] = UDR0;
+		rxbuf[rxbuf_len] = UDR0;
+		checksum += rxbuf[rxbuf_len++];
 		
 		if(rxbuf_len == 4)
 		{

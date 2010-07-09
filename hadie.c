@@ -91,6 +91,7 @@ char tx_image(void)
 	static uint16_t pkg_len;
 	
 	static uint8_t img_id = 0;
+	static uint8_t img_tx;
 	static uint8_t pkt_id;
 	
 	if(!setup)
@@ -101,6 +102,8 @@ char tx_image(void)
 		pkt_id = 0;
 		pkg_len = 0;
 		pkg_id = 0;
+		img_tx = 0;
+		img_id++;
 	}
 	
 	/* Initialise the packet -- make sure previous packet has finished TX'ing! */
@@ -114,17 +117,13 @@ char tx_image(void)
 			char msg[100];
 			if(c3_get_package(pkg_id++, &pkg, &pkg_len) != 0)
 			{
-				snprintf(msg, 100, "$$" CALLSIGN ",Get package %i failed, had %i bytes: %02X %02X %02X %02X\n", pkg_id - 1, pkg_len, pkg[0], pkg[1], pkg[2], pkg[3]);
+				snprintf(msg, 100, "$$" CALLSIGN ",Get package %i failed\n", pkg_id - 1);
 				rtx_string(msg);
 				rtx_wait();
 				
 				setup = 0;
 				return(-1);
 			}
-			
-			snprintf(msg, 100, "$$" CALLSIGN ",Got package %i, %i bytes, %i in pkt\n", pkg_id - 1, pkg_len, pkt_len);
-			rtx_string(msg);
-			rtx_wait();
 			
 			/* Skip the package header */
 			pkg += 4;
@@ -141,10 +140,18 @@ char tx_image(void)
 			pkg += l;
 			pkg_len -= l;
 			pkt_len += l;
+			img_tx += l;
+		}
+		
+		/* Have we reached the end of the image? */
+		if(img_tx == image_len)
+		{
+			c3_finish_picture();
+			setup = 0;
+			break;
 		}
 	}
 	
-	rtx_string_P(PSTR("TX'ing packet\n"));
 	encode_rs_8(&pkt[1], &pkt[PKT_SIZE_HEADER + PKT_SIZE_PAYLOAD], 0);
 	rtx_data(pkt, PKT_SIZE);
 	
