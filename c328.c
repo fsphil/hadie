@@ -1,3 +1,12 @@
+/* hadie - High Altitude Balloon flight software              */
+/*============================================================*/
+/* Copyright (C)2010 Philip Heron <phil@sanslogic.co.uk>      */
+/*                                                            */
+/* This program is distributed under the terms of the GNU     */
+/* General Public License, version 2. You may use, modify,    */
+/* and redistribute it under the terms of this license. A     */
+/* copy should be included with this source.                  */
+
 /* Interface to the C328 UART camera */
 
 #include "config.h"
@@ -82,9 +91,9 @@ static char c3_cmd(uint8_t cmd, uint8_t a1, uint8_t a2, uint8_t a3, uint8_t a4)
 
 void c3_init(void)
 {
-	/* Do UART initialisation, port 0 @ 9600 baud for 7.3728 MHz clock */
+	/* Do UART initialisation, port 0 @ 14.4k baud for 7.3728 MHz clock */
 	UBRR0H = 0;
-	UBRR0L = 47;
+	UBRR0L = 31;
 	
 	/* Enable TX & RX */
 	UCSR0B = (1 << RXEN0) | (1 << TXEN0);
@@ -188,11 +197,11 @@ char c3_get_package(uint16_t id, uint8_t **dst, uint16_t *length)
 	}
 	
 	/* Test for timeout or incomplete package */
-	if(rxbuf_len != s) return(-1);
+	if(rxbuf_len != s) return(-2);
 	
 	/* Fix and test checksum */
 	checksum -= rxbuf[rxbuf_len - 2];
-	if(checksum != rxbuf[rxbuf_len - 2]) return(-1);
+	if(checksum != rxbuf[rxbuf_len - 2]) return(-3);
 	
 	/* All done */
 	*dst = rxbuf;
