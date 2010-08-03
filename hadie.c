@@ -103,7 +103,7 @@ char tx_image(void)
 	
 	if(!setup)
 	{
-		if(setup_camera() != 0) return(-1);
+		if(setup_camera() != 0) return(setup);
 		setup = -1;
 		
 		pkt_id = 0;
@@ -223,7 +223,7 @@ int main(void)
 	
 	while(1)
 	{
-		r = 5;
+		r = 10;
 		
 		if(tx_image() == -1)
 		{
