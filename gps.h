@@ -7,11 +7,25 @@
 /* and redistribute it under the terms of this license. A     */
 /* copy should be included with this source.                  */
 
-#ifndef INC_CONFIG_H
-#define INC_CONFIG_H
+typedef struct {
+	
+	uint8_t hour;   /* 0-23 */
+	uint8_t minute; /* 0-60 */
+	uint8_t second; /* 0-60 */
+	
+	int16_t  latitude_i; /* -180-180 */
+	uint32_t latitude_f; /* 0-999999 */
+	
+	int16_t  longitude_i; /* -180-180 */
+	uint32_t longitude_f; /* 0-999999 */
+	
+	int32_t altitude; /* 0-99999 */
+	
+	uint8_t fix;  /* 0-2  */
+	uint8_t sats; /* 0-99 */
+	
+} gpsfix_t;
 
-#define F_CPU     (7372800)       /* Ticks per second     */
-#define CALLSIGN  "hadie"         /* The mission callsign */
-#define RTTY_BAUD (300)           /* RTTY baud rate       */
+extern void gps_init();
+extern char gps_parse(gpsfix_t *gps);
 
-#endif
