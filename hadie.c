@@ -32,6 +32,7 @@ char msg[MSG_SIZE];
 uint8_t pkt[PKT_SIZE];
 uint16_t pkt_len;
 uint16_t image_len;
+uint8_t image_pkts;
 
 void init_packet(uint8_t *packet, uint8_t imageid, uint8_t pktid, uint8_t pkts, uint16_t width, uint16_t height)
 {
@@ -84,6 +85,10 @@ char setup_camera(void)
 		return(-1);
 	}
 	
+	/* Calculate the number of packets needed for this image */
+	image_pkts  = image_len / PKT_SIZE_PAYLOAD;
+	image_pkts += (image_len % PKT_SIZE_PAYLOAD > 0 ? 1 : 0);
+	
 	/* Camera is ready to transfer the image data */
 	
 	return(0);
@@ -114,7 +119,7 @@ char tx_image(void)
 	}
 	
 	/* Initialise the packet -- make sure previous packet has finished TX'ing! */
-	init_packet(pkt, img_id, pkt_id++, 0xFF, 320, 240);
+	init_packet(pkt, img_id, pkt_id++, image_pkts, 320, 240);
 	pkt_len = 0;
 	
 	while(pkt_len < PKT_SIZE_PAYLOAD)
