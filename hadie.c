@@ -114,7 +114,7 @@ char tx_image(void)
 	}
 	
 	/* Initialise the packet -- make sure previous packet has finished TX'ing! */
-	init_packet(pkt, img_id, pkt_id++, 0xFF, 640, 480);
+	init_packet(pkt, img_id, pkt_id++, 0xFF, 320, 240);
 	pkt_len = 0;
 	
 	while(pkt_len < PKT_SIZE_PAYLOAD)
