@@ -15,9 +15,11 @@ typedef struct {
 	
 	int16_t  latitude_i; /* -180-180 */
 	uint32_t latitude_f; /* 0-999999 */
+	char     latitude_h; /* Hemisphere */
 	
 	int16_t  longitude_i; /* -180-180 */
 	uint32_t longitude_f; /* 0-999999 */
+	char     longitude_h; /* Hemisphere */
 	
 	int32_t altitude; /* 0-99999 */
 	

@@ -178,7 +178,7 @@ char gps_parse(gpsfix_t *gps)
 			break;
 		
 		case 3: /* Latitude hemisphere */
-			if(*r == 'S') gps->latitude_i = -gps->latitude_i;
+			gps->latitude_h = (*r == 'S' ? 'S' : 'N');
 			break;
 		
 		case 4: /* Longitude */
@@ -187,7 +187,7 @@ char gps_parse(gpsfix_t *gps)
 			break;
 		
 		case 5: /* Longitude hemisphere */
-			if(*r == 'W') gps->longitude_i = -gps->longitude_i;
+			gps->longitude_h = (*r == 'W' ? 'W' : 'E');
 			break;
 		
 		case 6: /* Fix quality */
