@@ -57,7 +57,12 @@ char tx_image(void)
 	{
 		uint16_t image_len;
 		
-		if(c3_open(SR_320x240) != 0) return(setup);
+		if(c3_open(SR_320x240) != 0)
+		{
+			rtx_string_P(PSTR(PREFIX CALLSIGN ":Camera error\n"));
+			return(setup);
+		}
+		
 		setup = -1;
 		pkt_id = 0;
 		img_id++;
@@ -71,7 +76,13 @@ char tx_image(void)
 	/* Initialise the packet */
 	init_packet(pkt, img_id, pkt_id++, image_pkts, 320, 240);
 	
-	c3_read(&pkt[PKT_SIZE_HEADER], PKT_SIZE_PAYLOAD);
+	if(c3_read(&pkt[PKT_SIZE_HEADER], PKT_SIZE_PAYLOAD) == 0)
+	{
+		rtx_string_P(PSTR(PREFIX CALLSIGN ":Error reading from camera\n"));
+		c3_close();
+		setup = 0;
+		return(setup);
+	}
 	
 	if(c3_eof())
 	{
