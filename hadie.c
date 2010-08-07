@@ -30,8 +30,6 @@ char msg[MSG_SIZE];
 #define PKT_SIZE_RSCODES (0x20)
 #define PKT_SIZE_PAYLOAD (PKT_SIZE - PKT_SIZE_HEADER - PKT_SIZE_RSCODES)
 uint8_t pkt[PKT_SIZE];
-uint16_t pkt_len;
-uint16_t image_len;
 uint8_t image_pkts;
 
 void init_packet(uint8_t *packet, uint8_t imageid, uint8_t pktid, uint8_t pkts, uint16_t width, uint16_t height)
@@ -49,129 +47,41 @@ void init_packet(uint8_t *packet, uint8_t imageid, uint8_t pktid, uint8_t pkts, 
 	memset(&packet[PKT_SIZE_HEADER], 0, PKT_SIZE_PAYLOAD);
 }
 
-char setup_camera(void)
-{
-	if(c3_sync() != 0)
-	{
-		rtx_string_P(PSTR(PREFIX CALLSIGN ":Camera sync failed...\n"));
-		return(-1);
-	}
-	
-	/* Setup the camera */
-	if(c3_setup(CT_JPEG, 0, SR_320x240) != 0)
-	{
-		rtx_string_P(PSTR(PREFIX CALLSIGN ":Camera setup failed...\n"));
-		return(-1);
-	}
-	
-	/* Set the package size */
-	if(c3_set_package_size(PKT_SIZE_PAYLOAD + 6) != 0)
-	{
-		rtx_string_P(PSTR(PREFIX CALLSIGN ":Package size set failed!\n"));
-		return(-1);
-	}
-	
-	/* Take the image */
-	if(c3_snapshot(ST_JPEG, 0) != 0)
-	{
-		rtx_string_P(PSTR(PREFIX CALLSIGN ":Snapshot failed!\n"));
-		return(-1);
-	}
-	
-	/* Get the image size and begin the transfer */
-	if(c3_get_picture(PT_SNAPSHOT, &image_len) != 0)
-	{
-		rtx_string_P(PSTR(PREFIX CALLSIGN ":Get picture failed\n"));
-		return(-1);
-	}
-	
-	/* Calculate the number of packets needed for this image */
-	image_pkts  = image_len / PKT_SIZE_PAYLOAD;
-	image_pkts += (image_len % PKT_SIZE_PAYLOAD > 0 ? 1 : 0);
-	
-	/* Camera is ready to transfer the image data */
-	
-	return(0);
-}
-
 char tx_image(void)
 {
 	static char setup = 0;
-	
-	static uint16_t pkg_id;
-	static uint8_t *pkg;
-	static uint16_t pkg_len;
-	
 	static uint8_t img_id = 0;
-	static uint16_t img_tx;
 	static uint8_t pkt_id;
 	
 	if(!setup)
 	{
-		if(setup_camera() != 0) return(setup);
-		setup = -1;
+		uint16_t image_len;
 		
+		if(c3_open(SR_320x240) != 0) return(setup);
+		setup = -1;
 		pkt_id = 0;
-		pkg_len = 0;
-		pkg_id = 0;
-		img_tx = 0;
 		img_id++;
+		
+		/* Calculate the number of packets needed for this image */
+		image_len   = c3_filesize();
+		image_pkts  = image_len / PKT_SIZE_PAYLOAD;
+		image_pkts += (image_len % PKT_SIZE_PAYLOAD > 0 ? 1 : 0);
 	}
 	
-	/* Initialise the packet -- make sure previous packet has finished TX'ing! */
+	/* Initialise the packet */
 	init_packet(pkt, img_id, pkt_id++, image_pkts, 320, 240);
-	pkt_len = 0;
 	
-	while(pkt_len < PKT_SIZE_PAYLOAD)
+	c3_read(&pkt[PKT_SIZE_HEADER], PKT_SIZE_PAYLOAD);
+	
+	if(c3_eof())
 	{
-		if(pkg_len == 0)
-		{
-			char msg[100];
-			char i;
-			if((i = c3_get_package(pkg_id++, &pkg, &pkg_len)) != 0)
-			{
-				snprintf(msg, 100, PREFIX CALLSIGN ",Get package %i failed (%i)\n", pkg_id - 1, i);
-				rtx_string(msg);
-				rtx_wait();
-				
-				setup = 0;
-				return(setup);
-			}
-			
-			/* Skip the package header */
-			pkg += 4;
-			pkg_len -= 6;
-		}
-		
-		if(pkg_len > 0)
-		{
-			uint16_t l = PKT_SIZE_PAYLOAD - pkt_len;
-			if(pkg_len < l) l = pkg_len;
-			
-			/* TODO: Copy with the JPEG filter */
-			memcpy(pkt + PKT_SIZE_HEADER + pkt_len, pkg, l);
-			
-			pkg += l;
-			pkg_len -= l;
-			pkt_len += l;
-			img_tx += l;
-		}
-		
-		/* Have we reached the end of the image? */
-		if(img_tx >= image_len)
-		{
-			c3_finish_picture();
-			setup = 0;
-			break;
-		}
+		c3_close();
+		setup = 0;
 	}
 	
 	encode_rs_8(&pkt[1], &pkt[PKT_SIZE_HEADER + PKT_SIZE_PAYLOAD], 0);
 	rtx_string_P(PSTR("UUU")); /* U = 0x55 */
 	rtx_data(pkt, PKT_SIZE);
-	//rtx_wait();
-	
-	//c3_ping();
 	
 	return(setup);
 }

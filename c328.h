@@ -100,4 +100,10 @@ extern char c3_get_picture(uint8_t pt, uint16_t *length);
 extern char c3_get_package(uint16_t id, uint8_t **dst, uint16_t *length);
 extern char c3_finish_picture(void);
 
+extern char c3_open(uint8_t jr);
+extern char c3_close(void);
+extern uint16_t c3_read(uint8_t *ptr, uint16_t length);
+extern uint16_t c3_filesize(void);
+extern char c3_eof(void);
+
 #endif

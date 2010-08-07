@@ -11,6 +11,7 @@
 
 #include "config.h"
 #include <stdint.h>
+#include <string.h>
 #include <avr/io.h> 
 #include "c328.h"
 
@@ -214,5 +215,87 @@ char c3_finish_picture(void)
 {
 	c3_tx(CMD_ACK, 0, 0, 0xF0, 0xF0);
 	return(0);
+}
+
+/****************** Simple interface ******************/
+
+static uint16_t image_len;
+static uint16_t image_read;
+
+static uint8_t *package;
+static uint16_t package_len;
+static uint16_t package_id;
+
+char c3_open(uint8_t jr)
+{
+	/* Open, setup and take the image */
+	if(c3_sync() != 0) return(-1);
+	if(c3_setup(CT_JPEG, 0, jr) != 0) return(-2);
+	if(c3_set_package_size(RXBUF_LEN) != 0) return(-3);
+	if(c3_snapshot(ST_JPEG, 0) != 0) return(-4);
+	if(c3_get_picture(PT_SNAPSHOT, &image_len) != 0) return(-5);
+	
+	image_read = 0;
+	package = NULL;
+	package_len = 0;
+	package_id = 0;
+	
+	return(0);
+}
+
+char c3_close(void)
+{
+	c3_finish_picture();
+	return(0);
+}
+
+uint16_t c3_read(uint8_t *ptr, uint16_t length)
+{
+	uint16_t r;
+	
+	/* Don't read past the end of the image */
+	r = image_len - image_read;
+	if(length > r) length = r;
+	
+	r = length;
+	while(r)
+	{
+		if(package_len == 0)
+		{
+			char i = c3_get_package(package_id++, &package, &package_len);
+			if(i != 0) return(length - r);
+			
+			/* Skip the package headers and checksum */
+			package += 4;
+			package_len -= 6;
+		}
+		else
+		{
+			uint16_t b = r;
+			if(b > package_len) b = package_len;
+			
+			memcpy(ptr, package, b);
+			
+			package     += b;
+			package_len -= b;
+			
+			ptr += b;
+			r   -= b;
+			
+			image_read += b;
+		}
+	}
+	
+	return(length);
+}
+
+uint16_t c3_filesize(void)
+{
+	return(image_len);
+}
+
+char c3_eof(void)
+{
+	return(image_read >= image_len);
 }
 
