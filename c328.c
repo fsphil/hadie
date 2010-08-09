@@ -251,7 +251,7 @@ char c3_close(void)
 
 uint16_t c3_read(uint8_t *ptr, uint16_t length)
 {
-	uint16_t r;
+	uint16_t r; /* Number of bytes left to read */
 	
 	/* Don't read past the end of the image */
 	r = image_len - image_read;
@@ -274,12 +274,15 @@ uint16_t c3_read(uint8_t *ptr, uint16_t length)
 			uint16_t b = r;
 			if(b > package_len) b = package_len;
 			
-			memcpy(ptr, package, b);
+			if(ptr)
+			{
+				memcpy(ptr, package, b);
+				ptr += b;
+			}
 			
 			package     += b;
 			package_len -= b;
 			
-			ptr += b;
 			r   -= b;
 			
 			image_read += b;
