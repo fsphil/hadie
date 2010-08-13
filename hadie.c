@@ -39,8 +39,8 @@ void init_packet(uint8_t *packet, uint8_t imageid, uint8_t pktid, uint8_t pkts, 
 	packet[2] = imageid;     /* Image ID        */
 	packet[3] = pktid;       /* Packet ID       */
 	packet[4] = pkts;        /* Packets         */
-	packet[5] = width >> 3;  /* Width MCU       */
-	packet[6] = height >> 3; /* Height MCU      */
+	packet[5] = width >> 4;  /* Width MCU       */
+	packet[6] = height >> 4; /* Height MCU      */
 	packet[7] = 0xFF;        /* Next MCU offset */
 	packet[8] = 0x00;        /* MCU ID MSB      */
 	packet[9] = 0x00;        /* MCU ID LSB      */
