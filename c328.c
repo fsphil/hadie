@@ -283,7 +283,7 @@ uint16_t c3_read(uint8_t *ptr, uint16_t length)
 			package     += b;
 			package_len -= b;
 			
-			r   -= b;
+			r -= b;
 			
 			image_read += b;
 		}

@@ -19,7 +19,7 @@ $(PROJECT).out: $(OBJECTS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f *.o *.out *.map *.hex
+	rm -f *.o *.out *.map *.hex *~
 
 flash: rom.hex
 	avrdude -p m644p -c stk500v2 -P $(TTYPORT) -U flash:w:rom.hex:i
