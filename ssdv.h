@@ -81,14 +81,5 @@ extern char ssdv_enc_set_buffer(ssdv_t *s, uint8_t *buffer);
 extern char ssdv_enc_get_packet(ssdv_t *s);
 extern char ssdv_enc_feed(ssdv_t *s, uint8_t *buffer, size_t length);
 
-/* Decoding */
-extern char ssdv_dec_init(ssdv_t *s);
-extern char ssdv_dec_set_buffer(ssdv_t *s, uint8_t *buffer, size_t length);
-extern char ssdv_dec_feed(ssdv_t *s, uint8_t *packet);
-extern char ssdv_dec_get_jpeg(ssdv_t *s, size_t *length);
-
-#ifdef __cplusplus
-}
-#endif
 #endif
 
