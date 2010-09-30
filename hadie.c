@@ -17,6 +17,7 @@
 #include "gps.h"
 #include "c328.h"
 #include "rs8.h"
+#include "ssdv.h"
 
 /* Message buffer */
 #define MSG_SIZE (100)
@@ -25,38 +26,17 @@ char msg[MSG_SIZE];
 #define PREFIX "$$$$"
 
 /* Image TX data */
-#define PKT_SIZE         (0x100)
-#define PKT_SIZE_HEADER  (0x0A)
-#define PKT_SIZE_RSCODES (0x20)
-#define PKT_SIZE_PAYLOAD (PKT_SIZE - PKT_SIZE_HEADER - PKT_SIZE_RSCODES)
-uint8_t pkt[PKT_SIZE];
-uint8_t image_pkts;
-
-void init_packet(uint8_t *packet, uint8_t imageid, uint8_t pktid, uint8_t pkts, uint16_t width, uint16_t height)
-{
-	packet[0] = 0x55;        /* Sync            */
-	packet[1] = 0x66;        /* Type            */
-	packet[2] = imageid;     /* Image ID        */
-	packet[3] = pktid;       /* Packet ID       */
-	packet[4] = pkts;        /* Packets         */
-	packet[5] = width >> 4;  /* Width MCU       */
-	packet[6] = height >> 4; /* Height MCU      */
-	packet[7] = 0xFF;        /* Next MCU offset */
-	packet[8] = 0x00;        /* MCU ID MSB      */
-	packet[9] = 0x00;        /* MCU ID LSB      */
-	memset(&packet[PKT_SIZE_HEADER], 0, PKT_SIZE_PAYLOAD);
-}
+uint8_t pkt[SSDV_PKT_SIZE], img[64];
 
 char tx_image(void)
 {
 	static char setup = 0;
 	static uint8_t img_id = 0;
-	static uint8_t pkt_id;
+	static ssdv_t ssdv;
+	int r;
 	
 	if(!setup)
 	{
-		uint16_t image_len;
-		
 		if(c3_open(SR_320x240) != 0)
 		{
 			rtx_string_P(PSTR(PREFIX CALLSIGN ":Camera error\n"));
@@ -64,35 +44,37 @@ char tx_image(void)
 		}
 		
 		setup = -1;
-		pkt_id = 0;
-		img_id++;
 		
-		/* Calculate the number of packets needed for this image */
-		image_len   = c3_filesize();
-		image_pkts  = image_len / PKT_SIZE_PAYLOAD;
-		image_pkts += (image_len % PKT_SIZE_PAYLOAD > 0 ? 1 : 0);
+		ssdv_enc_init(&ssdv, img_id++);
+		ssdv_enc_set_buffer(&ssdv, pkt);
 	}
 	
-	/* Initialise the packet */
-	init_packet(pkt, img_id, pkt_id++, image_pkts, 320, 240);
-	
-	if(c3_read(&pkt[PKT_SIZE_HEADER], PKT_SIZE_PAYLOAD) == 0)
+	while((r = ssdv_enc_get_packet(&ssdv)) == SSDV_FEED_ME)
 	{
-		rtx_string_P(PSTR(PREFIX CALLSIGN ":Error reading from camera\n"));
+		size_t r = c3_read(img, 64);
+		if(r == 0) break;
+		ssdv_enc_feed(&ssdv, img, r);
+	}
+	
+	if(r != SSDV_OK)
+	{
+		/* Something went wrong! */
 		c3_close();
 		setup = 0;
+		rtx_string_P(PSTR(PREFIX CALLSIGN ":ssdv_enc_get_packet() failed\n"));
 		return(setup);
 	}
 	
 	if(c3_eof())
 	{
+		/* The end of the image has been reached */
 		c3_close();
 		setup = 0;
 	}
 	
-	encode_rs_8(&pkt[1], &pkt[PKT_SIZE_HEADER + PKT_SIZE_PAYLOAD], 0);
+	/* Got the packet! Transmit it */
 	rtx_string_P(PSTR("UUU")); /* U = 0x55 */
-	rtx_data(pkt, PKT_SIZE);
+	rtx_data(pkt, SSDV_PKT_SIZE);
 	
 	return(setup);
 }

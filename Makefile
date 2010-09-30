@@ -1,6 +1,6 @@
 
 PROJECT=hadie
-OBJECTS=hadie.o rtty.o gps.o rs8encode.o c328.o
+OBJECTS=hadie.o rtty.o gps.o rs8encode.o c328.o ssdv.o
 
 # Serial device used for programming AVR
 TTYPORT=/dev/ttyACM0
