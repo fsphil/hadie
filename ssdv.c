@@ -220,7 +220,7 @@ static char ssdv_process(ssdv_t *s)
 					ssdv_out_jpeg_int(s, 0, s->dc[s->component]);
 				else ssdv_out_jpeg_int(s, 0, 0);
 				
-				/* skip* to the next AC part immediately */
+				/* skip to the next AC part immediately */
 				s->acpart++;
 			}
 			else
@@ -232,8 +232,7 @@ static char ssdv_process(ssdv_t *s)
 		}
 		else /* AC */
 		{
-			/* Output AC codes directly */
-			//ssdv_out_huff(s, symbol);
+			s->acrle = 0;
 			
 			if(symbol == 0x00)
 			{
@@ -251,7 +250,8 @@ static char ssdv_process(ssdv_t *s)
 			{
 				/* Next bits are an integer value */
 				s->state = J_INT;
-				s->acpart += symbol >> 4;
+				s->acrle = symbol >> 4;
+				s->acpart += s->acrle;
 				s->needbits = symbol & 0x0F;
 			}
 		}
@@ -288,7 +288,7 @@ static char ssdv_process(ssdv_t *s)
 		else /* AC */
 		{
 			/* Output AC codes directly */
-			ssdv_out_jpeg_int(s, 0, i); /* RLE? */
+			ssdv_out_jpeg_int(s, s->acrle, i);
 		}
 		
 		/* Next AC part to expect */

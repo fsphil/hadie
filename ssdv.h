@@ -68,6 +68,7 @@ typedef struct
 	unsigned char mcupart;   /* 0-3 = Y, 4 = Cb, 5 = Cr                 */
 	unsigned char acpart;   /* 0 - 64; 0 = DC, 1 - 64 = AC              */
 	int dc[COMPONENTS]; /* DC value for each component                  */
+	uint8_t acrle;      /* RLE value for current AC value               */
 	unsigned char needbits; /* Number of bits needed to decode integer  */
 	
 	/* Small buffer for reading SOF0 and SOS header data into */
