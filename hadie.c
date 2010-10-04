@@ -65,7 +65,7 @@ char tx_image(void)
 		return(setup);
 	}
 	
-	if(c3_eof())
+	if(ssdv.state == S_EOI || c3_eof())
 	{
 		/* The end of the image has been reached */
 		c3_close();

@@ -59,7 +59,14 @@ typedef struct
 	uint8_t outlen;    /* Number of bits in the output bit buffer       */
 	
 	/* JPEG decoder state */
-	enum { J_MARKER = 0, J_MARKER_LEN, J_MARKER_DATA, J_HUFF, J_INT } state;
+	enum {
+		S_MARKER = 0,
+		S_MARKER_LEN,
+		S_MARKER_DATA,
+		S_HUFF,
+		S_INT,
+		S_EOI
+	} state;
 	uint16_t marker;    /* Current marker                               */
 	uint16_t marker_len; /* Length of data following marker             */
 	uint8_t *marker_data; /* Where to copy marker data too              */

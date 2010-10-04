@@ -202,7 +202,7 @@ static char ssdv_out_jpeg_int(ssdv_t *s, uint8_t rle, int value)
 
 static char ssdv_process(ssdv_t *s)
 {
-	if(s->state == J_HUFF)
+	if(s->state == S_HUFF)
 	{
 		uint8_t symbol, width;
 		int r;
@@ -226,7 +226,7 @@ static char ssdv_process(ssdv_t *s)
 			else
 			{
 				/* DC value follows, 'symbol' bits wide */
-				s->state = J_INT;
+				s->state = S_INT;
 				s->needbits = symbol;
 			}
 		}
@@ -242,14 +242,14 @@ static char ssdv_process(ssdv_t *s)
 			}
 			else if(symbol == 0xF0)
 			{
-				/* The next 15 AC parts are zero */
+				/* The next 16 AC parts are zero */
 				ssdv_out_jpeg_int(s, 15, 0);
-				s->acpart += 15;
+				s->acpart += 16;
 			}
 			else
 			{
 				/* Next bits are an integer value */
-				s->state = J_INT;
+				s->state = S_INT;
 				s->acrle = symbol >> 4;
 				s->acpart += s->acrle;
 				s->needbits = symbol & 0x0F;
@@ -260,7 +260,7 @@ static char ssdv_process(ssdv_t *s)
 		s->worklen -= width;
 		s->workbits &= (1 << s->worklen) - 1;
 	}
-	else if(s->state == J_INT)
+	else if(s->state == S_INT)
 	{
 		int i;
 		
@@ -295,7 +295,7 @@ static char ssdv_process(ssdv_t *s)
 		s->acpart++;
 		
 		/* Next bits are a huffman code */
-		s->state = J_HUFF;
+		s->state = S_HUFF;
 		
 		/* Clear processed bits */
 		s->worklen -= s->needbits;
@@ -350,13 +350,17 @@ static char ssdv_have_marker(ssdv_t *s)
 		
 		s->marker_data     = s->hbuff;
 		s->marker_data_len = 0;
-		s->state           = J_MARKER_DATA;
+		s->state           = S_MARKER_DATA;
+		break;
+	
+	case J_EOI:
+		s->state = S_EOI;
 		break;
 	
 	default:
 		/* Ignore other marks, skipping any associated data */
 		s->in_skip = s->marker_len;
-		s->state   = J_MARKER;
+		s->state   = S_MARKER;
 		break;
 	}
 	
@@ -392,12 +396,12 @@ static char ssdv_have_marker_data(ssdv_t *s)
 		if(d[0] != 3) return(SSDV_ERROR);
 		
 		/* The SOS data is followed by the image data */
-		s->state = J_HUFF;
+		s->state = S_HUFF;
 		
 		return(SSDV_OK);
 	}
 	
-	s->state = J_MARKER;
+	s->state = S_MARKER;
 	return(SSDV_OK);
 }
 
@@ -428,6 +432,9 @@ char ssdv_enc_get_packet(ssdv_t *s)
 	int r;
 	uint8_t b;
 	
+	/* Have we reached the end of the image? */
+	if(s->state == S_EOI) return(SSDV_EOI);	
+	
 	/* If the output buffer is empty, re-initialise */
 	if(s->out_len == 0) ssdv_enc_set_buffer(s, s->out);
 	
@@ -441,7 +448,7 @@ char ssdv_enc_get_packet(ssdv_t *s)
 		
 		switch(s->state)
 		{
-		case J_MARKER:
+		case S_MARKER:
 			s->marker = (s->marker << 8) | b;
 			
 			if(s->marker == J_TEM ||
@@ -455,12 +462,12 @@ char ssdv_enc_get_packet(ssdv_t *s)
 			{
 				/* All other markers are followed by data */
 				s->marker_len = 0;
-				s->state = J_MARKER_LEN;
+				s->state = S_MARKER_LEN;
 				s->needbits = 16;
 			}
 			break;
 		
-		case J_MARKER_LEN:
+		case S_MARKER_LEN:
 			s->marker_len = (s->marker_len << 8) | b;
 			if((s->needbits -= 8) == 0)
 			{
@@ -469,7 +476,7 @@ char ssdv_enc_get_packet(ssdv_t *s)
 			}
 			break;
 		
-		case J_MARKER_DATA:
+		case S_MARKER_DATA:
 			s->marker_data[s->marker_data_len++] = b;
 			if(s->marker_data_len == s->marker_len)
 			{
@@ -477,8 +484,8 @@ char ssdv_enc_get_packet(ssdv_t *s)
 			}
 			break;
 		
-		case J_HUFF:
-		case J_INT:
+		case S_HUFF:
+		case S_INT:
 			/* Is the next byte a stuffing byte? Skip it */
 			/* TODO: Test the next byte is actually 0x00 */
 			if(b == 0xFF) s->in_skip++;
@@ -526,7 +533,7 @@ char ssdv_enc_get_packet(ssdv_t *s)
 				s->packet_id++;
 				
 				/* Have we reached the end of the image data? */
-				if(r == SSDV_EOI) s->state = J_MARKER;
+				if(r == SSDV_EOI) s->state = S_EOI;
 				
 				return(SSDV_OK);
 			}
@@ -535,6 +542,10 @@ char ssdv_enc_get_packet(ssdv_t *s)
 				/* An error occured */
 				return(SSDV_ERROR);
 			}
+			break;
+		
+		case S_EOI:
+			/* Shouldn't reach this point */
 			break;
 		}
 	}
