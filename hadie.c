@@ -28,6 +28,11 @@ char msg[MSG_SIZE];
 /* Image TX data */
 uint8_t pkt[SSDV_PKT_SIZE], img[64];
 
+/* State of the flight */
+#define ALT_STEP (200)
+static int32_t r_altitude = 0; /* Reference altitude */
+static char ascent = 1; /* Direction of travel. 0 = Down, 1 = Up */
+
 char tx_image(void)
 {
 	static char setup = 0;
@@ -37,6 +42,9 @@ char tx_image(void)
 	
 	if(!setup)
 	{
+		/* Don't begin transmitting a new image if the payload is falling */
+		if(ascent == 0) return(setup);
+		
 		if(c3_open(SR_320x240) != 0)
 		{
 			rtx_string_P(PSTR(PREFIX CALLSIGN ":Camera error\n"));
@@ -111,6 +119,29 @@ char tx_telemetry(void)
 	
 	/* Begin transmitting */
 	rtx_string(msg);
+	
+	/* Update the ascent / descent status */
+	if(gps.fix > 0)
+	{
+		int32_t i = ascent;
+		
+		if(gps.altitude >= r_altitude + ALT_STEP)
+		{
+			/* Payload is rising */
+			ascent = 1;
+			r_altitude = gps.altitude;
+		}
+		else if(gps.altitude <= r_altitude - ALT_STEP)
+		{
+			/* Payload is falling */
+			ascent = 0;
+			r_altitude = gps.altitude;
+		}
+		
+		/* If staring to fall above 4000 metres... */
+		if(gps.altitude >= 4000 && i == 1 && ascent == 0)
+			rtx_string_P(PSTR(PREFIX CALLSIGN ":Geronimo!!!!\n"));
+	}
 	
 	return(0);
 }
