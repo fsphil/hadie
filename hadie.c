@@ -23,7 +23,7 @@
 #define MSG_SIZE (100)
 char msg[MSG_SIZE];
 
-#define PREFIX "$$$$"
+#define PREFIX "$$"
 
 /* Image TX data */
 uint8_t pkt[SSDV_PKT_SIZE], img[64];
@@ -73,7 +73,6 @@ char tx_image(void)
 	}
 	
 	/* Got the packet! Transmit it */
-	rtx_string_P(PSTR("UUU")); /* U = 0x55 */
 	rtx_data(pkt, SSDV_PKT_SIZE);
 	
 	return(setup);
@@ -107,8 +106,8 @@ char tx_telemetry(void)
 		gps.longitude_i, gps.longitude_f,
 		gps.altitude, gps.fix, gps.sats);
 	
-	/* Append the checksum, skipping the first four $'s */
-	crccat(msg + 4);
+	/* Append the checksum, skipping the $$ prefix */
+	crccat(msg + 2);
 	
 	/* Begin transmitting */
 	rtx_string(msg);
