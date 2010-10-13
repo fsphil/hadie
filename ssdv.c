@@ -178,6 +178,13 @@ static char ssdv_outbits(ssdv_t *s, uint16_t bits, uint8_t length)
 	return(s->out_len ? SSDV_OK : SSDV_BUFFER_FULL);
 }
 
+static char ssdv_outbits_sync(ssdv_t *s)
+{
+	uint8_t b = s->outlen % 8;
+	if(b) return(ssdv_outbits(s, 0xFF, 8 - b));
+	return(SSDV_OK);
+}
+
 static char ssdv_out_jpeg_int(ssdv_t *s, uint8_t rle, int value)
 {
 	uint16_t huffbits = 0;
@@ -311,7 +318,11 @@ static char ssdv_process(ssdv_t *s)
 			s->mcu_id++;
 			
 			/* Test for the end of image */
-			if(s->mcu_id >= s->mcu_count) return(SSDV_EOI);
+			if(s->mcu_id >= s->mcu_count)
+			{
+				ssdv_outbits_sync(s);
+				return(SSDV_EOI);
+			}
 			
 			/* Set the packet MCU marker - encoder only */
 			if(s->packet_mcu_id == 0xFFFF)
