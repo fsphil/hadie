@@ -105,7 +105,7 @@ char tx_telemetry(void)
 	
 	rtx_wait();
 	snprintf(msg, MSG_SIZE,
-		PREFIX CALLSIGN ",%u,%02i:%02i:%02i,%s%i.%06lu,%s%i.%06lu,%li,%i:%i",
+		PREFIX CALLSIGN ",%u,%02i:%02i:%02i,%s%i.%06lu,%s%i.%06lu,%li,%i,%i,?",
 		counter++,
 		gps.hour, gps.minute, gps.second,
 		(gps.latitude_h == 'S' ? "-" : ""),
