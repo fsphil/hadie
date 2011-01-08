@@ -7,6 +7,12 @@
 /* and redistribute it under the terms of this license. A     */
 /* copy should be included with this source.                  */
 
+#ifndef GPS_H
+#define GPS_H
+
+/* Uncomment if using a u-blox 5 based GPS receiver */
+#define UBLOX5 1
+
 typedef struct {
 	
 	uint8_t hour;   /* 0-23 */
@@ -28,6 +34,12 @@ typedef struct {
 	
 } gpsfix_t;
 
-extern void gps_init();
+extern void gps_init(void);
 extern char gps_parse(gpsfix_t *gps);
+
+#ifdef UBLOX5
+extern char gps_ubx_init(void);
+#endif
+
+#endif
 

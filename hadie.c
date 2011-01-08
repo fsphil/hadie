@@ -163,17 +163,23 @@ int main(void)
 	
 	while(1)
 	{
-		r = 10;
-		
 		if(tx_image() == -1)
 		{
 			/* The camera goes to sleep while transmitting telemetry,
 			 * sync'ing here seems to prevent it. */
 			c3_sync();
+			rtx_string_P(PSTR("\n"));
 			r = 1;
 		}
+		else
+		{
+			/* Put UBLOX5 GPS in proper nav mode */
+			if(gps_ubx_init() != 0)
+				rtx_string_P(PSTR(PREFIX CALLSIGN ":GPS mode set failed\n"));
+			
+			r = 10;
+		}
 		
-		rtx_string_P(PSTR("\n"));
 		for(; r > 0; r--) tx_telemetry();
 	}
 	

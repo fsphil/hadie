@@ -34,7 +34,7 @@ static uint16_t pkg_len = 64; /* Default is 64 according to datasheet */
 /* Timeout counter */
 volatile static uint8_t timeout_clk = 0;
 
-void inline c3_tick(void)
+inline void c3_tick(void)
 {
 	if(timeout_clk) timeout_clk--;
 }

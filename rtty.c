@@ -15,12 +15,13 @@
 #include <string.h>
 #include "rtty.h"
 
-/* For camera timeout */
-#include "c328.h"
+/* For camera and GPS timeout */
+extern inline void c3_tick(void);
+extern inline void gps_tick(void);
 
 /* MARK = Upper tone, Idle, bit  */
 #define TXPIN    (1 << 0) /* PB0 */
-#define TXENABLE (1 << 1) /* PB1 */
+#define TXENABLE (1 << 2) /* PB2 */
 
 #define TXBIT(b) PORTB = (PORTB & ~TXPIN) | ((b) ? TXPIN : 0)
 
@@ -39,7 +40,8 @@ ISR(TIMER0_COMPA_vect)
 	{
 	case 0: b = 0; break; /* Start bit */
 	case 9: b = 1; break; /* Stop bit */
-	case 10: b = 1; TCNT0 += OCR0A >> 1; bit = 0; break; /* Stop bit 0.5 */
+	//case 10: b = 1; TCNT0 += OCR0A >> 1; bit = 0; break; /* Stop bit 0.5 */
+	case 10: b = 1; bit = 0; break; /* Stop bit part 2 */
 	default: b = byte & 1; byte >>= 1; break;
 	}
 	
@@ -52,11 +54,12 @@ ISR(TIMER0_COMPA_vect)
 		txlen--;
 	}
 	
-	/* Camera timeout tick */
+	/* Camera and GPS timeout tick */
 	c3_tick();
+	gps_tick();
 }
 
-void rtx_init()
+void rtx_init(void)
 {
 	/* RTTY is driven by TIMER0 in CTC mode */
 	TCCR0A = _BV(WGM01); /* Mode 2, CTC */
@@ -70,7 +73,7 @@ void rtx_init()
 	DDRB |= TXPIN | TXENABLE;
 }
 
-void inline rtx_wait()
+void inline rtx_wait(void)
 {
 	/* Wait for interrupt driven TX to finish */
 	while(txlen > 0) while(txlen > 0);
