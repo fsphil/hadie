@@ -64,7 +64,7 @@ void rtx_init(void)
 	/* RTTY is driven by TIMER0 in CTC mode */
 	TCCR0A = _BV(WGM01); /* Mode 2, CTC */
 	TCCR0B = _BV(CS02) | _BV(CS00); /* prescaler 1024 */
-	OCR0A = F_CPU / 1024 / RTTY_BAUD;
+	OCR0A = F_CPU / 1024 / RTTY_BAUD - 1;
 	TIMSK0 = _BV(OCIE0A); /* Enable interrupt */
 	
 	/* We use Port B pins 1 and 2 */
