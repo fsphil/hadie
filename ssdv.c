@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <util/crc16.h>
 #include "ssdv.h"
 #include "rs8.h"
 
@@ -516,6 +517,7 @@ char ssdv_enc_get_packet(ssdv_t *s)
 			{
 				uint16_t mcu_id     = s->packet_mcu_id;
 				uint16_t mcu_offset = s->packet_mcu_offset;
+				uint16_t i, x;
 				
 				if(mcu_offset != 0xFFFF && mcu_offset >= SSDV_PKT_SIZE_PAYLOAD * 8)
 				{
@@ -545,8 +547,15 @@ char ssdv_enc_get_packet(ssdv_t *s)
 				/* Fill any remaining bytes with noise */
 				if(s->out_len > 0) ssdv_memset_prng(s->outp, s->out_len);
 				
+				/* Calculate the CRC codes */
+				for(i = 1, x = 0xFFFF; i < SSDV_PKT_SIZE - SSDV_PKT_SIZE_RSCODES - SSDV_PKT_SIZE_CHECKSUM; i++)
+					x = _crc_xmodem_update(x, s->out[i]);
+				
+				s->out[i++] = x >> 8;
+				s->out[i++] = x & 0xFF;
+				
 				/* Generate the RS codes */
-				encode_rs_8(&s->out[1], &s->out[SSDV_PKT_SIZE - SSDV_PKT_SIZE_RSCODES], 0);
+				encode_rs_8(&s->out[1], &s->out[i], 0);
 				
 				s->packet_id++;
 				
