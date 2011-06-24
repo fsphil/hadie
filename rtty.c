@@ -21,7 +21,7 @@ extern inline void gps_tick(void);
 
 /* MARK = Upper tone, Idle, bit  */
 #define TXPIN    (1 << 0) /* PB0 */
-#define TXENABLE (1 << 2) /* PB2 */
+#define TXENABLE (1 << 1) /* PB1 */
 
 #define TXBIT(b) PORTB = (PORTB & ~TXPIN) | ((b) ? TXPIN : 0)
 
@@ -59,6 +59,12 @@ ISR(TIMER0_COMPA_vect)
 	gps_tick();
 }
 
+void rtx_enable(char en)
+{
+	if(en) PORTB |= TXENABLE;
+	else PORTB &= ~TXENABLE;
+}
+
 void rtx_init(void)
 {
 	/* RTTY is driven by TIMER0 in CTC mode */
@@ -69,8 +75,8 @@ void rtx_init(void)
 	
 	/* We use Port B pins 1 and 2 */
 	TXBIT(1);
-	PORTB |= TXENABLE;
-	DDRB |= TXPIN | TXENABLE;
+	rtx_enable(0);
+	DDRB  |= TXPIN | TXENABLE;
 }
 
 void inline rtx_wait(void)

@@ -349,9 +349,9 @@ void gps_init(void)
 {
 	rxline[0] = '\0';
 	
-	/* Do UART1 initialisation, 38400 baud @ 7.3728 MHz */
+	/* Do UART1 initialisation, 9600 baud @ 7.3728 MHz */
 	UBRR1H = 0;
-	UBRR1L = 11;
+	UBRR1L = 47;
 	
 	/* Enable RX, TX and RX interrupt */
 	UCSR1B = (1 << RXEN1) | (1 << TXEN1) | (1 << RXCIE1);

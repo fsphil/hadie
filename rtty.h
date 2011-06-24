@@ -14,6 +14,7 @@
 #include <avr/pgmspace.h>
 
 extern void rtx_init(void);
+extern void rtx_enable(char en);
 extern void inline rtx_wait(void);
 extern void rtx_data(uint8_t *data, size_t length);
 extern void rtx_data_P(PGM_P data, size_t length);
