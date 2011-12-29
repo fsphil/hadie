@@ -155,7 +155,8 @@ int main(void)
 	gps_init();
 	c3_init();
 	
-	/* Let the radio settle before beginning */
+	/* Turn on the radio and let it settle before beginning */
+	rtx_enable(1);
 	_delay_ms(2000);
 	
 	/* Start interrupts and enter the main loop */
