@@ -12,7 +12,7 @@ OBJCOPY=avr-objcopy
 rom.hex: $(PROJECT).out
 	$(OBJCOPY) -O ihex $(PROJECT).out rom.hex
 
-$(PROJECT).out: $(OBJECTS)
+$(PROJECT).out: $(OBJECTS) config.h
 	$(CC) $(CFLAGS) -o $(PROJECT).out -Wl,-Map,$(PROJECT).map $(OBJECTS)
 
 .c.o:
