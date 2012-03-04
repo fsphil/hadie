@@ -53,7 +53,7 @@ char tx_image(void)
 		
 		setup = -1;
 		
-		ssdv_enc_init(&ssdv, img_id++);
+		ssdv_enc_init(&ssdv, CALLSIGN, img_id++);
 		ssdv_enc_set_buffer(&ssdv, pkt);
 	}
 	

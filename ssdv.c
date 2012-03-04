@@ -1,17 +1,25 @@
-/* hadie - High Altitude Balloon flight software              */
-/*============================================================*/
-/* Copyright (C)2010 Philip Heron <phil@sanslogic.co.uk>      */
-/*                                                            */
-/* This program is distributed under the terms of the GNU     */
-/* General Public License, version 2. You may use, modify,    */
-/* and redistribute it under the terms of this license. A     */
-/* copy should be included with this source.                  */
 
-#include <stdio.h>
-#include <stdlib.h>
+/* SSDV - Slow Scan Digital Video                                        */
+/*=======================================================================*/
+/* Copyright 2011-2012 Philip Heron <phil@sanslogic.co.uk                */
+/*                                                                       */
+/* This program is free software: you can redistribute it and/or modify  */
+/* it under the terms of the GNU General Public License as published by  */
+/* the Free Software Foundation, either version 3 of the License, or     */
+/* (at your option) any later version.                                   */
+/*                                                                       */
+/* This program is distributed in the hope that it will be useful,       */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty of        */
+/* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         */
+/* GNU General Public License for more details.                          */
+/*                                                                       */
+/* You should have received a copy of the GNU General Public License     */
+/* along with this program.  If not, see <http://www.gnu.org/licenses/>. */
+
 #include <stdint.h>
 #include <string.h>
 #include <util/crc16.h>
+#include <avr/pgmspace.h>
 #include "ssdv.h"
 #include "rs8.h"
 
@@ -28,18 +36,35 @@ enum {
 	J_LSE,  J_JPG9,  J_JPG10, J_JPG11, J_JPG12, J_JPG13, J_COM,
 } jpeg_marker_t;
 
-/* Huffman tables for output (and for the C328 camera, input also) */
-static uint8_t dht00[29] = {
+/* Quantisation tables */
+PROGMEM static const uint8_t const std_dqt0[65] = {
+0x00,0x10,0x0C,0x0C,0x0E,0x0C,0x0A,0x10,0x0E,0x0E,0x0E,0x12,0x12,0x10,0x14,0x18,
+0x28,0x1A,0x18,0x16,0x16,0x18,0x32,0x24,0x26,0x1E,0x28,0x3A,0x34,0x3E,0x3C,0x3A,
+0x34,0x38,0x38,0x40,0x48,0x5C,0x4E,0x40,0x44,0x58,0x46,0x38,0x38,0x50,0x6E,0x52,
+0x58,0x60,0x62,0x68,0x68,0x68,0x3E,0x4E,0x72,0x7A,0x70,0x64,0x78,0x5C,0x66,0x68,
+0x64,
+};
+
+PROGMEM static const uint8_t const std_dqt1[65] = {
+0x01,0x12,0x12,0x12,0x16,0x16,0x16,0x30,0x1A,0x1A,0x30,0x64,0x42,0x38,0x42,0x64,
+0x64,0x64,0x64,0x64,0x64,0x64,0x64,0x64,0x64,0x64,0x64,0x64,0x64,0x64,0x64,0x64,
+0x64,0x64,0x64,0x64,0x64,0x64,0x64,0x64,0x64,0x64,0x64,0x64,0x64,0x64,0x64,0x64,
+0x64,0x64,0x64,0x64,0x64,0x64,0x64,0x64,0x64,0x64,0x64,0x64,0x64,0x64,0x64,0x64,
+0x64,
+};
+
+/* Standard Huffman tables */
+PROGMEM static const uint8_t const std_dht00[29] = {
 0x00,0x00,0x01,0x05,0x01,0x01,0x01,0x01,0x01,0x01,0x00,0x00,0x00,0x00,0x00,0x00,
 0x00,0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,
 };
 
-static uint8_t dht01[29] = {
+PROGMEM static const uint8_t const std_dht01[29] = {
 0x01,0x00,0x03,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x00,0x00,0x00,0x00,
 0x00,0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,
 };
 
-static uint8_t dht10[179] = {
+PROGMEM static const uint8_t const std_dht10[179] = {
 0x10,0x00,0x02,0x01,0x03,0x03,0x02,0x04,0x03,0x05,0x05,0x04,0x04,0x00,0x00,0x01,
 0x7D,0x01,0x02,0x03,0x00,0x04,0x11,0x05,0x12,0x21,0x31,0x41,0x06,0x13,0x51,0x61,
 0x07,0x22,0x71,0x14,0x32,0x81,0x91,0xA1,0x08,0x23,0x42,0xB1,0xC1,0x15,0x52,0xD1,
@@ -54,7 +79,7 @@ static uint8_t dht10[179] = {
 0xF8,0xF9,0xFA,
 };
 
-static uint8_t dht11[179] = {
+PROGMEM static const uint8_t const std_dht11[179] = {
 0x11,0x00,0x02,0x01,0x02,0x04,0x04,0x03,0x04,0x07,0x05,0x04,0x04,0x00,0x01,0x02,
 0x77,0x00,0x01,0x02,0x03,0x11,0x04,0x05,0x21,0x31,0x06,0x12,0x41,0x51,0x07,0x61,
 0x71,0x13,0x22,0x32,0x81,0x08,0x14,0x42,0x91,0xA1,0xB1,0xC1,0x09,0x23,0x33,0x52,
@@ -69,8 +94,56 @@ static uint8_t dht11[179] = {
 0xF8,0xF9,0xFA,
 };
 
-static uint8_t *dht_dc[3] = { dht00, dht01, dht01 };
-static uint8_t *dht_ac[3] = { dht10, dht11, dht11 };
+/* Helper for returning the current DHT table */
+#define SDHT (s->sdht[s->acpart ? 1 : 0][s->component ? 1 : 0])
+#define DDHT (s->ddht[s->acpart ? 1 : 0][s->component ? 1 : 0])
+
+/* Helpers for looking up the current DQT value */
+#define SDQT (s->sdqt[s->component ? 1 : 0][1 + s->acpart])
+#define DDQT (s->ddqt[s->component ? 1 : 0][1 + s->acpart])
+
+/* Helpers for converting between DQT tables */
+#define AADJ(i) (SDQT == DDQT ? (i) : irdiv(i, DDQT))
+#define UADJ(i) (SDQT == DDQT ? (i) : (i * SDQT))
+#define BADJ(i) (SDQT == DDQT ? (i) : irdiv(i * SDQT, DDQT))
+
+/* Integer-only division with rounding */
+static int irdiv(int i, int div)
+{
+	i = i * 2 / div;
+	if(i & 1) i += (i > 0 ? 1 : -1);
+	return(i / 2);
+}
+
+static void *dtblcpy(ssdv_t *s, const void *src, size_t n)
+{
+	void *r;
+	if(s->dtbl_len + n > TBL_LEN) return(NULL);
+	r = memcpy_P(&s->dtbls[s->dtbl_len], src, n);
+	s->dtbl_len += n;
+	return(r);
+}
+
+static uint32_t encode_callsign(char *callsign)
+{
+	uint32_t x;
+	char *c;
+	
+	/* Point c at the end of the callsign */
+	for(c = callsign; *c; c++);
+	
+	/* Encode it backwards */
+	x = 0;
+	for(c--; c >= callsign; c--)
+	{
+		x *= 40;
+		if(*c >= 'A' && *c <= 'Z') x += *c - 'A' + 14;
+		else if(*c >= 'a' && *c <= 'z') x += *c - 'a' + 14;
+		else if(*c >= '0' && *c <= '9') x += *c - '0' + 1;
+	}
+	
+	return(x);
+}
 
 static inline char jpeg_dht_lookup(ssdv_t *s, uint8_t *symbol, uint8_t *width)
 {
@@ -79,8 +152,7 @@ static inline char jpeg_dht_lookup(ssdv_t *s, uint8_t *symbol, uint8_t *width)
 	uint8_t *dht, *ss;
 	
 	/* Select the appropriate huffman table */
-	if(s->acpart == 0) dht = dht_dc[s->component];
-	else               dht = dht_ac[s->component];
+	dht = SDHT;
 	ss = &dht[17];
 	
 	for(cw = 1; cw <= 16; cw++)
@@ -108,10 +180,14 @@ static inline char jpeg_dht_lookup(ssdv_t *s, uint8_t *symbol, uint8_t *width)
 	return(SSDV_ERROR);
 }
 
-static inline char jpeg_dht_lookup_symbol(uint8_t *dht, uint8_t symbol, uint16_t *bits, uint8_t *width)
+static inline char jpeg_dht_lookup_symbol(ssdv_t *s, uint8_t symbol, uint16_t *bits, uint8_t *width)
 {
 	uint16_t code = 0;
-	uint8_t cw, n, *ss = &dht[17];
+	uint8_t cw, n;
+	uint8_t *dht, *ss;
+	
+	dht = DDHT;
+	ss = &dht[17];
 	
 	for(cw = 1; cw <= 16; cw++)
 	{
@@ -191,16 +267,9 @@ static char ssdv_out_jpeg_int(ssdv_t *s, uint8_t rle, int value)
 	uint16_t huffbits = 0;
 	int intbits;
 	uint8_t hufflen = 0, intlen;
-	uint8_t *dht;
-	int r;
-	
-	/* Select the appropriate huffman table */
-	/* TODO: Do this elsewhere */
-	if(s->acpart == 0) dht = dht_dc[s->component];
-	else               dht = dht_ac[s->component];
 	
 	jpeg_encode_int(value, &intbits, &intlen);
-	r = jpeg_dht_lookup_symbol(dht, (rle << 4) | (intlen & 0x0F), &huffbits, &hufflen);
+	jpeg_dht_lookup_symbol(s, (rle << 4) | (intlen & 0x0F), &huffbits, &hufflen);
 	
 	ssdv_outbits(s, huffbits, hufflen);
 	if(intlen) ssdv_outbits(s, intbits, intlen);
@@ -224,8 +293,10 @@ static char ssdv_process(ssdv_t *s)
 			if(symbol == 0x00)
 			{
 				/* No change in DC from last block */
-				if(s->mcupart == 0 || s->mcupart == 4 || s->mcupart == 5)
-					ssdv_out_jpeg_int(s, 0, s->dc[s->component]);
+				if(s->reset_mcu == s->mcu_id && (s->mcupart == 0 || s->mcupart >= s->ycparts))
+				{
+					ssdv_out_jpeg_int(s, 0, s->adc[s->component]);
+				}
 				else ssdv_out_jpeg_int(s, 0, 0);
 				
 				/* skip to the next AC part immediately */
@@ -241,7 +312,6 @@ static char ssdv_process(ssdv_t *s)
 		else /* AC */
 		{
 			s->acrle = 0;
-			
 			if(symbol == 0x00)
 			{
 				/* EOB -- all remaining AC parts are zero */
@@ -280,23 +350,47 @@ static char ssdv_process(ssdv_t *s)
 		
 		if(s->acpart == 0) /* DC */
 		{
-			s->dc[s->component] += i;
-			
-			if(s->mcupart == 0 || s->mcupart == 4 || s->mcupart == 5)
+			if(s->reset_mcu == s->mcu_id && (s->mcupart == 0 || s->mcupart >= s->ycparts))
 			{
 				/* Output absolute DC value */
-				ssdv_out_jpeg_int(s, 0, s->dc[s->component]);
+				s->dc[s->component] += UADJ(i);
+				s->adc[s->component] = AADJ(s->dc[s->component]);
+				ssdv_out_jpeg_int(s, 0, s->adc[s->component]);
 			}
 			else
 			{
 				/* Output relative DC value */
-				ssdv_out_jpeg_int(s, 0, i);
+				s->dc[s->component] += UADJ(i);
+				
+				/* Calculate closest adjusted DC value */
+				i = AADJ(s->dc[s->component]);
+				ssdv_out_jpeg_int(s, 0, i - s->adc[s->component]);
+				s->adc[s->component] = i;
 			}
 		}
 		else /* AC */
 		{
-			/* Output AC codes directly */
-			ssdv_out_jpeg_int(s, s->acrle, i);
+			if((i = BADJ(i)))
+			{
+				s->accrle += s->acrle;
+				while(s->accrle >= 16)
+				{
+					ssdv_out_jpeg_int(s, 15, 0);
+					s->accrle -= 16;
+				}
+				ssdv_out_jpeg_int(s, s->accrle, i);
+				s->accrle = 0;
+			}
+			else
+			{
+				/* AC value got reduced to 0 in the DQT conversion */
+				if(s->acpart >= 63)
+				{
+					ssdv_out_jpeg_int(s, 0, 0);
+					s->accrle = 0;
+				}
+				else s->accrle += s->acrle + 1;
+			}
 		}
 		
 		/* Next AC part to expect */
@@ -313,7 +407,7 @@ static char ssdv_process(ssdv_t *s)
 	if(s->acpart >= 64)
 	{
 		/* Reached the end of this MCU part */
-		if(++s->mcupart == 6)
+		if(++s->mcupart == s->ycparts + 2)
 		{
 			s->mcupart = 0;
 			s->mcu_id++;
@@ -321,6 +415,7 @@ static char ssdv_process(ssdv_t *s)
 			/* Test for the end of image */
 			if(s->mcu_id >= s->mcu_count)
 			{
+				/* Flush any remaining bits */
 				ssdv_outbits_sync(s);
 				return(SSDV_EOI);
 			}
@@ -328,16 +423,27 @@ static char ssdv_process(ssdv_t *s)
 			/* Set the packet MCU marker - encoder only */
 			if(s->packet_mcu_id == 0xFFFF)
 			{
+				/* The first MCU of each packet should be byte aligned */
+				ssdv_outbits_sync(s);
+				
+				s->reset_mcu = s->mcu_id;
 				s->packet_mcu_id = s->mcu_id;
-				s->packet_mcu_offset =
-					(SSDV_PKT_SIZE_PAYLOAD - s->out_len) * 8 + s->outlen;
+				s->packet_mcu_offset = SSDV_PKT_SIZE_PAYLOAD - s->out_len;
+			}
+			
+			/* Test for a reset marker */
+			if(s->dri > 0 && s->mcu_id > 0 && s->mcu_id % s->dri == 0)
+			{
+				s->state = S_MARKER;
+				return(SSDV_FEED_ME);
 			}
 		}
 		
-		if(s->mcupart < 4) s->component = 0;
-		else s->component = s->mcupart - 3;
+		if(s->mcupart < s->ycparts) s->component = 0;
+		else s->component = s->mcupart - s->ycparts + 1;
 		
 		s->acpart = 0;
+		s->accrle = 0;
 	}
 	
 	if(s->out_len == 0) return(SSDV_BUFFER_FULL);
@@ -360,20 +466,42 @@ static char ssdv_have_marker(ssdv_t *s)
 	{
 	case J_SOF0:
 	case J_SOS:
+	case J_DRI:
+	case J_DHT:
+	case J_DQT:
 		/* Copy the data before processing */
-		if(s->marker_len > HBUFF_LEN)
+		if(s->marker_len > TBL_LEN + HBUFF_LEN - s->stbl_len)
 		{
 			/* Not enough memory ... shouldn't happen! */
 			return(SSDV_ERROR);
 		}
 		
-		s->marker_data     = s->hbuff;
+		s->marker_data     = &s->stbls[s->stbl_len];
 		s->marker_data_len = 0;
 		s->state           = S_MARKER_DATA;
 		break;
 	
+	case J_SOF2:
+		/* Don't do progressive images! */
+		return(SSDV_ERROR);
+	
 	case J_EOI:
 		s->state = S_EOI;
+		break;
+	
+	case J_RST0:
+	case J_RST1:
+	case J_RST2:
+	case J_RST3:
+	case J_RST4:
+	case J_RST5:
+	case J_RST6:
+	case J_RST7:
+		s->dc[0]  = s->dc[1]  = s->dc[2]  = 0;
+		s->mcupart = s->acpart = s->component = 0;
+		s->acrle = s->accrle = 0;
+		s->workbits = s->worklen = 0;
+		s->state = S_HUFF;
 		break;
 	
 	default:
@@ -389,6 +517,8 @@ static char ssdv_have_marker(ssdv_t *s)
 static char ssdv_have_marker_data(ssdv_t *s)
 {
 	uint8_t *d = s->marker_data;
+	size_t l = s->marker_len;
+	int i;
 	
 	switch(s->marker)
 	{
@@ -396,17 +526,52 @@ static char ssdv_have_marker_data(ssdv_t *s)
 		s->width  = (d[3] << 8) | d[4];
 		s->height = (d[1] << 8) | d[2];
 		
-		/* Calculate number of MCU blocks in this image -- assumes 16x16 blocks */
-		s->mcu_count = (s->width >> 4) * (s->height >> 4);
-		
 		/* The image must have a precision of 8 */
 		if(d[0] != 8) return(SSDV_ERROR);
 		
 		/* The image must have 3 components (Y'Cb'Cr) */
 		if(d[5] != 3) return(SSDV_ERROR);
 		
+		/* Maximum image is 4080x4080 */
+		if(s->width > 4080 || s->height > 4080) return(SSDV_ERROR);
+		
 		/* The image dimensions must be a multiple of 16 */
 		if((s->width & 0x0F) || (s->height & 0x0F)) return(SSDV_ERROR);
+		
+		/* TODO: Read in the quantisation table ID for each component */
+		// 01 22 00 02 11 01 03 11 01
+		for(i = 0; i < 3; i++)
+		{
+			uint8_t *dq = &d[i * 3 + 6];
+			if(dq[0] != i + 1) return(SSDV_ERROR);
+			
+			/* The first (Y) component must have a factor of 2x2,2x1,1x2 or 1x1 */
+			if(dq[0] == 1)
+			{
+				switch(dq[1])
+				{
+				case 0x22: s->mcu_mode = 0; s->ycparts = 4; break;
+				case 0x12: s->mcu_mode = 1; s->ycparts = 2; break;
+				case 0x21: s->mcu_mode = 2; s->ycparts = 2; break;
+				case 0x11: s->mcu_mode = 3; s->ycparts = 1; break;
+				default: return(SSDV_ERROR);
+				}
+			}
+			else if(dq[0] != 1 && dq[1] != 0x11) return(SSDV_ERROR);
+		}
+		
+		/* Calculate number of MCU blocks in this image */
+		switch(s->mcu_mode)
+		{
+		case 0: l = (s->width >> 4) * (s->height >> 4); break;
+		case 1: l = (s->width >> 4) * (s->height >> 3); break;
+		case 2: l = (s->width >> 3) * (s->height >> 4); break;
+		case 3: l = (s->width >> 3) * (s->height >> 3); break;
+		}
+		
+		if(l > 0xFFFF) return(SSDV_ERROR);
+		
+		s->mcu_count = l;
 		
 		break;
 	
@@ -414,20 +579,88 @@ static char ssdv_have_marker_data(ssdv_t *s)
 		/* The image must have 3 components (Y'Cb'Cr) */
 		if(d[0] != 3) return(SSDV_ERROR);
 		
+		for(i = 0; i < 3; i++)
+		{
+			uint8_t *dh = &d[i * 2 + 1];
+			if(dh[0] != i + 1) return(SSDV_ERROR);
+		}
+		
+		/* Do I need to look at the last three bytes of the SOS data? */
+		/* 00 3F 00 */
+		
+		/* Verify all of the DQT and DHT tables where loaded */
+		if(!s->sdqt[0] || !s->sdqt[1]) return(SSDV_ERROR);
+		
+		if(!s->sdht[0][0] || !s->sdht[0][1] ||
+		   !s->sdht[1][0] || !s->sdht[1][1]) return(SSDV_ERROR);
+		
 		/* The SOS data is followed by the image data */
 		s->state = S_HUFF;
 		
 		return(SSDV_OK);
+	
+	case J_DHT:
+		s->stbl_len += l;
+		while(l > 0)
+		{
+			int i, j;
+			
+			switch(d[0])
+			{
+			case 0x00: s->sdht[0][0] = d; break;
+			case 0x01: s->sdht[0][1] = d; break;
+			case 0x10: s->sdht[1][0] = d; break;
+			case 0x11: s->sdht[1][1] = d; break;
+			}
+			
+			/* Skip to the next DHT table */
+			for(j = 17, i = 1; i <= 16; i++)
+				j += d[i];
+			
+			l -= j;
+			d += j;
+		}
+		break;
+	
+	case J_DQT:
+		s->stbl_len += l;
+		while(l > 0)
+		{
+			switch(d[0])
+			{
+			case 0x00: s->sdqt[0] = d; break;
+			case 0x01: s->sdqt[1] = d; break;
+			}
+			
+			/* Skip to the next one, if present */
+			l -= 65;
+			d += 65;
+		}
+		break;
+	
+	case J_DRI:
+		s->dri = (d[0] << 8) + d[1];
+		break;
 	}
 	
 	s->state = S_MARKER;
 	return(SSDV_OK);
 }
 
-char ssdv_enc_init(ssdv_t *s, uint8_t image_id)
+char ssdv_enc_init(ssdv_t *s, char *callsign, uint8_t image_id)
 {
 	memset(s, 0, sizeof(ssdv_t));
 	s->image_id = image_id;
+	s->callsign = encode_callsign(callsign);
+	
+	/* Prepare the output JPEG tables */
+	s->ddqt[0] = dtblcpy(s, std_dqt0, sizeof(std_dqt0));
+	s->ddqt[1] = dtblcpy(s, std_dqt1, sizeof(std_dqt1));
+	s->ddht[0][0] = dtblcpy(s, std_dht00, sizeof(std_dht00));
+	s->ddht[0][1] = dtblcpy(s, std_dht01, sizeof(std_dht01));
+	s->ddht[1][0] = dtblcpy(s, std_dht10, sizeof(std_dht10));
+	s->ddht[1][1] = dtblcpy(s, std_dht11, sizeof(std_dht11));
+	
 	return(SSDV_OK);
 }
 
@@ -436,6 +669,9 @@ char ssdv_enc_set_buffer(ssdv_t *s, uint8_t *buffer)
 	s->out     = buffer;
 	s->outp    = buffer + SSDV_PKT_SIZE_HEADER;
 	s->out_len = SSDV_PKT_SIZE_PAYLOAD;
+	
+	/* Zero the payload memory */
+	memset(s->out, 0, SSDV_PKT_SIZE);
 	
 	/* Flush the output bits */
 	ssdv_outbits(s, 0, 0);
@@ -449,7 +685,7 @@ char ssdv_enc_get_packet(ssdv_t *s)
 	uint8_t b;
 	
 	/* Have we reached the end of the image? */
-	if(s->state == S_EOI) return(SSDV_EOI);	
+	if(s->state == S_EOI) return(SSDV_EOI);
 	
 	/* If the output buffer is empty, re-initialise */
 	if(s->out_len == 0) ssdv_enc_set_buffer(s, s->out);
@@ -519,39 +755,45 @@ char ssdv_enc_get_packet(ssdv_t *s)
 			if(r == SSDV_BUFFER_FULL || r == SSDV_EOI)
 			{
 				uint16_t mcu_id     = s->packet_mcu_id;
-				uint16_t mcu_offset = s->packet_mcu_offset;
+				uint8_t  mcu_offset = s->packet_mcu_offset;
 				uint16_t i, x;
 				
-				if(mcu_offset != 0xFFFF && mcu_offset >= SSDV_PKT_SIZE_PAYLOAD * 8)
+				if(mcu_offset != 0xFF && mcu_offset >= SSDV_PKT_SIZE_PAYLOAD)
 				{
 					/* The first MCU begins in the next packet, not this one */
-					mcu_id = mcu_offset = 0xFFFF;
-					s->packet_mcu_offset -= SSDV_PKT_SIZE_PAYLOAD * 8;
+					mcu_id = 0xFFFF;
+					mcu_offset = 0xFF;
+					s->packet_mcu_offset -= SSDV_PKT_SIZE_PAYLOAD;
 				}
 				else
 				{
 					/* Clear the MCU data for the next packet */
-					s->packet_mcu_id = s->packet_mcu_offset = 0xFFFF;
+					s->packet_mcu_id = 0xFFFF;
+					s->packet_mcu_offset = 0xFF;
 				}
 				
 				/* A packet is ready, create the headers */
 				s->out[0]  = 0x55;                /* Sync */
 				s->out[1]  = 0x66;                /* Type */
-				s->out[2]  = s->image_id;         /* Image ID */
-				s->out[3]  = s->packet_id >> 8;   /* Packet ID MSB */
-				s->out[4]  = s->packet_id & 0xFF; /* Packet ID LSB */
-				s->out[5]  = s->width >> 4;       /* Width / 16 */
-				s->out[6]  = s->height >> 4;      /* Height / 16 */
-				s->out[7]  = mcu_offset >> 8;     /* Next MCU offset MSB */
-				s->out[8]  = mcu_offset & 0xFF;   /* Next MCU offset LSB */
-				s->out[9]  = mcu_id >> 8;         /* MCU ID MSB */
-				s->out[10] = mcu_id & 0xFF;       /* MCU ID LSB */
+				s->out[2]  = s->callsign >> 24;
+				s->out[3]  = s->callsign >> 16;
+				s->out[4]  = s->callsign >> 8;
+				s->out[5]  = s->callsign;
+				s->out[6]  = s->image_id;         /* Image ID */
+				s->out[7]  = s->packet_id >> 8;   /* Packet ID MSB */
+				s->out[8]  = s->packet_id & 0xFF; /* Packet ID LSB */
+				s->out[9]  = s->width >> 4;       /* Width / 16 */
+				s->out[10] = s->height >> 4;      /* Height / 16 */
+				s->out[11] = s->mcu_mode & 0x03;  /* MCU mode (2 bits) */
+				s->out[12] = mcu_offset;          /* Next MCU offset */
+				s->out[13] = mcu_id >> 8;         /* MCU ID MSB */
+				s->out[14] = mcu_id & 0xFF;       /* MCU ID LSB */
 				
 				/* Fill any remaining bytes with noise */
 				if(s->out_len > 0) ssdv_memset_prng(s->outp, s->out_len);
 				
 				/* Calculate the CRC codes */
-				for(i = 1, x = 0xFFFF; i < SSDV_PKT_SIZE - SSDV_PKT_SIZE_RSCODES - SSDV_PKT_SIZE_CHECKSUM; i++)
+				for(i = 1, x = 0xFFFF; i < SSDV_PKT_SIZE - SSDV_PKT_SIZE_RSCODES - SSDV_PKT_SIZE_CRC; i++)
 					x = _crc_xmodem_update(x, s->out[i]);
 				
 				s->out[i++] = x >> 8;
@@ -567,11 +809,7 @@ char ssdv_enc_get_packet(ssdv_t *s)
 				
 				return(SSDV_OK);
 			}
-			else if(r != SSDV_FEED_ME)
-			{
-				/* An error occured */
-				return(SSDV_ERROR);
-			}
+			else if(r != SSDV_FEED_ME) return(SSDV_ERROR);
 			break;
 		
 		case S_EOI:
