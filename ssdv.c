@@ -18,7 +18,6 @@
 
 #include <stdint.h>
 #include <string.h>
-#include <util/crc16.h>
 #include <avr/pgmspace.h>
 #include "ssdv.h"
 #include "rs8.h"
@@ -122,6 +121,25 @@ static void *dtblcpy(ssdv_t *s, const void *src, size_t n)
 	r = memcpy_P(&s->dtbls[s->dtbl_len], src, n);
 	s->dtbl_len += n;
 	return(r);
+}
+
+static uint32_t crc32(void *data, size_t length)
+{
+	uint32_t crc, x;
+	uint8_t i, *d;
+	
+	for(d = data, crc = 0xFFFFFFFF; length; length--)
+	{
+		x = (crc ^ *(d++)) & 0xFF;
+		for(i = 8; i > 0; i--)
+		{
+			if(x & 1) x = (x >> 1) ^ 0xEDB88320;
+			else x >>= 1;
+		}
+		crc = (crc >> 8) ^ x;
+	}
+	
+	return(crc ^ 0xFFFFFFFF);
 }
 
 static uint32_t encode_callsign(char *callsign)
@@ -754,9 +772,9 @@ char ssdv_enc_get_packet(ssdv_t *s)
 			
 			if(r == SSDV_BUFFER_FULL || r == SSDV_EOI)
 			{
-				uint16_t mcu_id     = s->packet_mcu_id;
-				uint8_t  mcu_offset = s->packet_mcu_offset;
-				uint16_t i, x;
+				uint16_t mcu_id       = s->packet_mcu_id;
+				uint8_t i, mcu_offset = s->packet_mcu_offset;
+				uint32_t x;
 				
 				if(mcu_offset != 0xFF && mcu_offset >= SSDV_PKT_SIZE_PAYLOAD)
 				{
@@ -793,10 +811,12 @@ char ssdv_enc_get_packet(ssdv_t *s)
 				if(s->out_len > 0) ssdv_memset_prng(s->outp, s->out_len);
 				
 				/* Calculate the CRC codes */
-				for(i = 1, x = 0xFFFF; i < SSDV_PKT_SIZE - SSDV_PKT_SIZE_RSCODES - SSDV_PKT_SIZE_CRC; i++)
-					x = _crc_xmodem_update(x, s->out[i]);
+				x = crc32(&s->out[1], SSDV_PKT_SIZE_CRCDATA);
 				
-				s->out[i++] = x >> 8;
+				i = 1 + SSDV_PKT_SIZE_CRCDATA;
+				s->out[i++] = (x >> 24) & 0xFF;
+				s->out[i++] = (x >> 16) & 0xFF;
+				s->out[i++] = (x >> 8) & 0xFF;
 				s->out[i++] = x & 0xFF;
 				
 				/* Generate the RS codes */
